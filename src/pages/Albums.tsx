@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, ChevronDown, LayoutGrid, Pencil, Trash2, MoreHorizontal, Calendar, Image as ImageIcon, Users } from 'lucide-react';
+import { Search, Plus, ChevronDown, LayoutGrid, Pencil, Trash2, MoreHorizontal, Calendar, Image as ImageIcon, Users, FolderOpen } from 'lucide-react';
 import { useAlbums, Album } from '@/hooks/useAlbums';
 import { useAlbumsLocal } from '@/hooks/useAlbumsLocal';
 import { AlbumDialog } from '@/components/AlbumDialog';
@@ -171,10 +171,16 @@ export default function Albums() {
   return (
     <Layout>
       <div className="space-y-6 bg-immich-bg dark:bg-immich-dark-bg">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-2xl font-semibold text-immich-fg dark:text-immich-dark-fg">Albums</h1>
+        {/* Page Header with Color State */}
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <FolderOpen className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-3xl font-semibold text-immich-fg dark:text-immich-dark-fg">Albums</h1>
+          </div>
 
+          {/* Header Controls */}
           <div className="flex items-center gap-3 flex-wrap">
             {/* Tabs - Mobile */}
             <div className="flex items-center gap-1 bg-secondary rounded-lg p-1 md:hidden">
@@ -182,11 +188,14 @@ export default function Albums() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center justify-center h-9 ${
                     activeTab === tab.id
-                      ? 'bg-immich-primary text-primary-foreground'
+                      ? 'text-white'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
+                  style={{
+                    backgroundColor: activeTab === tab.id ? '#a855f7' : 'transparent'
+                  }}
                   aria-label={`Filter ${tab.label} albums`}
                 >
                   {tab.label}
@@ -245,11 +254,14 @@ export default function Albums() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center h-9 ${
                 activeTab === tab.id
-                  ? 'bg-immich-primary text-primary-foreground'
+                  ? 'text-white'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
+              style={{
+                backgroundColor: activeTab === tab.id ? '#a855f7' : 'transparent'
+              }}
               aria-label={`Filter ${tab.label} albums`}
             >
               {tab.label}

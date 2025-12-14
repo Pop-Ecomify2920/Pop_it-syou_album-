@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useRef } from 'react';
-import { Image, FolderOpen, Search, Sun, Moon, LogOut, Upload } from 'lucide-react';
+import { Image, FolderOpen, Sun, Moon, LogOut, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 import { usePhotos } from '@/hooks/usePhotos';
@@ -26,7 +26,6 @@ export function Sidebar() {
   const navItems = [
     { path: '/photos', label: 'Photos', icon: Image },
     { path: '/albums', label: 'Albums', icon: FolderOpen },
-    { path: '/search', label: 'Search', icon: Search },
   ];
 
   const handleSignOut = () => {
@@ -93,36 +92,76 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 h-screen bg-sidebar flex flex-col border-r border-sidebar-border" role="complementary" aria-label="Main navigation">
+      {/* Selected Page Header */}
+      <div className="p-4 border-b border-sidebar-border">
+        {(() => {
+          const currentPage = navItems.find(item => location.pathname === item.path);
+          if (currentPage) {
+            const Icon = currentPage.icon;
+            
+            // Color mapping for different pages
+            const colorMap: Record<string, { bg: string; text: string }> = {
+              '/photos': { bg: 'bg-blue-500', text: 'text-white' },
+              '/albums': { bg: 'bg-purple-500', text: 'text-white' },
+            };
+            
+            const colors = colorMap[currentPage.path] || { bg: 'bg-immich-primary', text: 'text-white' };
+            
+            return (
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-10 h-10 ${colors.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                  <Icon className={`w-6 h-6 ${colors.text}`} aria-hidden="true" />
+                </div>
+                <h1 className="text-xl font-semibold text-sidebar-foreground">{currentPage.label}</h1>
+              </div>
+            );
+          }
+        })()}
+        
+        {/* Upload Button */}
+        <Button 
+          variant="default" 
+          size="default" 
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+          onClick={handleUploadClick}
+          aria-label="Upload photos"
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          Upload
+        </Button>
+      </div>
+
       {/* Navigation */}
       <nav className="p-4 space-y-2" role="navigation" aria-label="Primary navigation">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
+          
+          // Color mapping for different pages
+          const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
+            '/photos': { bg: 'bg-blue-500', text: 'text-white', icon: 'text-white' },
+            '/albums': { bg: 'bg-purple-500', text: 'text-white', icon: 'text-white' },
+          };
+          
+          const colors = colorMap[item.path] || { bg: 'bg-immich-primary', text: 'text-white', icon: 'text-white' };
+          
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`nav-button flex items-center gap-3 ${
-                isActive ? 'nav-button-active' : 'nav-button-inactive'
+              className={`nav-button flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all ${
+                isActive 
+                  ? `${colors.bg} ${colors.text}` 
+                  : 'nav-button-inactive'
               }`}
               aria-current={isActive ? 'page' : undefined}
               aria-label={`Navigate to ${item.label}`}
             >
-              <Icon className="w-5 h-5" aria-hidden="true" />
+              <Icon className={`w-5 h-5 ${isActive ? colors.icon : ''}`} aria-hidden="true" />
               {item.label}
             </button>
           );
         })}
-         <Button 
-            variant="upload" 
-            size="default" 
-            className="w-full"
-            onClick={handleUploadClick}
-            aria-label="Upload photos"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Upload
-          </Button>
       </nav>
 
       {/* Spacer */}

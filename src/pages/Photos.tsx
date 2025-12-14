@@ -299,6 +299,16 @@ export default function Photos() {
   return (
     <Layout>
       <div className="h-full flex flex-col bg-immich-bg dark:bg-immich-dark-bg">
+        {/* Page Header with Color State */}
+        <div className="p-6 border-b border-border mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Upload className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-3xl font-semibold text-immich-fg dark:text-immich-dark-fg">Photos</h1>
+          </div>
+        </div>
+
         {/* Memory Lane Widget */}
         {showMemoryLane && hasPhotos && (
           <div className="mb-6 p-4 bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border">
@@ -377,7 +387,7 @@ export default function Photos() {
               <Button onClick={() => fileInputRef.current?.click()} variant="upload" style={{ backgroundColor: '#3eb3da' }}>
                 <Upload className="w-4 h-4 mr-2" />
                 Upload photos
-              </Button>
+              </Button>   
             </div>
           </div>
         ) : (

@@ -8,7 +8,6 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Photos from "./pages/Photos";
 import Albums from "./pages/Albums";
-import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,7 +24,6 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/photos" element={<Photos />} />
             <Route path="/albums" element={<Albums />} />
-            <Route path="/search" element={<Search />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
