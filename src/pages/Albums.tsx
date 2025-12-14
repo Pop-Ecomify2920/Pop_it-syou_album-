@@ -1,0 +1,476 @@
+import { useState, useMemo } from 'react';
+import { Layout } from '@/components/Layout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search, Plus, ChevronDown, LayoutGrid, Pencil, Trash2, MoreHorizontal, Calendar, Image as ImageIcon, Users } from 'lucide-react';
+import { useAlbums, Album } from '@/hooks/useAlbums';
+import { useAlbumsLocal } from '@/hooks/useAlbumsLocal';
+import { AlbumDialog } from '@/components/AlbumDialog';
+import { DeleteAlbumDialog } from '@/components/DeleteAlbumDialog';
+import { useAlbumPhotos } from '@/hooks/useAlbumPhotos';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { format, formatDistanceToNow } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useNavigate } from 'react-router-dom';
+
+type Tab = 'all' | 'owned' | 'shared';
+type SortOption = 'date' | 'name' | 'recent';
+type GroupOption = 'none' | 'year' | 'owner';
+
+export default function Albums() {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<Tab>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('date');
+  const [groupBy, setGroupBy] = useState<GroupOption>('year');
+  const [expandedYears, setExpandedYears] = useState<number[]>([new Date().getFullYear()]);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
+  const [deletingAlbum, setDeletingAlbum] = useState<Album | null>(null);
+
+  // Use local storage version for albums (works without Supabase auth)
+  const { albums, isLoading, createAlbum, updateAlbum, deleteAlbum } = useAlbumsLocal();
+  const { addPhotosToAlbum, getPhotoCount, removeAllPhotosFromAlbum } = useAlbumPhotos();
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'owned', label: 'Owned' },
+    { id: 'shared', label: 'Shared' },
+  ];
+
+  const toggleYear = (year: number) => {
+    setExpandedYears(prev =>
+      prev.includes(year)
+        ? prev.filter(y => y !== year)
+        : [...prev, year]
+    );
+  };
+
+  // Filter albums based on tab and search
+  const filteredAlbums = useMemo(() => {
+    let result = albums.filter((album) => {
+      if (activeTab === 'shared' && !album.is_shared) return false;
+      if (activeTab === 'owned' && album.is_shared) return false;
+      if (searchQuery && !album.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    });
+
+    // Sort albums
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'recent':
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        case 'date':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+
+    return result;
+  }, [albums, activeTab, searchQuery, sortBy]);
+
+  // Group albums
+  const groupedAlbums = useMemo(() => {
+    if (groupBy === 'none') {
+      return { 'All Albums': filteredAlbums };
+    }
+
+    if (groupBy === 'year') {
+      return filteredAlbums.reduce((acc, album) => {
+        const year = new Date(album.created_at).getFullYear();
+        if (!acc[year]) {
+          acc[year] = [];
+        }
+        acc[year].push(album);
+        return acc;
+      }, {} as Record<number, Album[]>);
+    }
+
+    if (groupBy === 'owner') {
+      return filteredAlbums.reduce((acc, album) => {
+        const key = album.is_shared ? 'Shared' : 'Owned';
+        if (!acc[key]) {
+          acc[key] = [];
+        }
+        acc[key].push(album);
+        return acc;
+      }, {} as Record<string, Album[]>);
+    }
+
+    return { 'All Albums': filteredAlbums };
+  }, [filteredAlbums, groupBy]);
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return format(new Date(dateStr), 'MMM d, yyyy');
+  };
+
+  const formatDateRange = (oldest: string | null, newest: string | null) => {
+    if (!oldest && !newest) return 'No date range';
+    if (!oldest) return formatDate(newest);
+    if (!newest) return formatDate(oldest);
+    if (formatDate(oldest) === formatDate(newest)) return formatDate(oldest);
+    return `${formatDate(oldest)} - ${formatDate(newest)}`;
+  };
+
+  const handleCreateAlbum = (data: { name: string; description?: string; photoIds?: number[] }) => {
+    createAlbum.mutate(
+      { name: data.name, description: data.description, photoIds: data.photoIds },
+      {
+        onSuccess: (newAlbum) => {
+          // Add photos to album if provided
+          if (data.photoIds && data.photoIds.length > 0 && newAlbum?.id) {
+            addPhotosToAlbum(newAlbum.id, data.photoIds);
+          }
+          setCreateDialogOpen(false);
+        },
+      }
+    );
+  };
+
+  const handleUpdateAlbum = (data: { name: string; description?: string }) => {
+    if (!editingAlbum) return;
+    updateAlbum.mutate(
+      { id: editingAlbum.id, ...data },
+      { onSuccess: () => setEditingAlbum(null) }
+    );
+  };
+
+  const handleDeleteAlbum = () => {
+    if (!deletingAlbum) return;
+    deleteAlbum.mutate(deletingAlbum.id, {
+      onSuccess: () => {
+        // Remove all photo relationships for this album
+        removeAllPhotosFromAlbum(deletingAlbum.id);
+        setDeletingAlbum(null);
+      },
+    });
+  };
+
+  const getCoverImage = (album: Album) => {
+    // In a real app, this would fetch the cover photo
+    // For now, return a placeholder gradient
+    return `https://images.unsplash.com/photo-${1500000000000 + parseInt(album.id.slice(0, 8), 16)}?w=400`;
+  };
+
+  return (
+    <Layout>
+      <div className="space-y-6 bg-immich-bg dark:bg-immich-dark-bg">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <h1 className="text-2xl font-semibold text-immich-fg dark:text-immich-dark-fg">Albums</h1>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Tabs - Mobile */}
+            <div className="flex items-center gap-1 bg-secondary rounded-lg p-1 md:hidden">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-immich-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  aria-label={`Filter ${tab.label} albums`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search albums"
+                className="pl-9 w-48 md:w-64"
+                aria-label="Search albums"
+              />
+            </div>
+
+            {/* Sort */}
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">By date</SelectItem>
+                <SelectItem value="name">By name</SelectItem>
+                <SelectItem value="recent">Most recent</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Group By */}
+            <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupOption)}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Group by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No grouping</SelectItem>
+                <SelectItem value="year">By year</SelectItem>
+                <SelectItem value="owner">By owner</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Create Button */}
+            <Button variant="default" size="sm" onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Create album
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabs - Desktop */}
+        <div className="hidden md:flex items-center gap-1 bg-secondary rounded-lg p-1 w-fit">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-immich-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label={`Filter ${tab.label} albums`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border overflow-hidden">
+                <Skeleton className="w-full aspect-square" />
+                <div className="p-4 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredAlbums.length === 0 ? (
+          /* Empty State */
+          <div className="flex items-center justify-center py-20">
+            <div className="bg-immich-card dark:bg-immich-dark-gray rounded-3xl p-12 text-center max-w-lg border border-border">
+              <div className="flex justify-center mb-4">
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <div className="w-16 h-20 bg-muted rounded-lg transform -rotate-12" />
+                    <div className="w-16 h-20 bg-muted rounded-lg" />
+                    <div className="w-16 h-20 bg-muted rounded-lg transform rotate-12" />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-10 h-10 bg-muted-foreground/30 rounded-full flex items-center justify-center">
+                      <Plus className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p className="text-muted-foreground mb-4">
+                {searchQuery 
+                  ? 'No albums found matching your search'
+                  : activeTab === 'shared'
+                    ? 'No shared albums yet'
+                    : 'Create an album to organize your photos and videos'}
+              </p>
+              {!searchQuery && (
+                <Button onClick={() => setCreateDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create album
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Albums Grid */
+          <div className="space-y-8">
+            {Object.entries(groupedAlbums).map(([groupKey, groupAlbums]) => {
+              const isYearGroup = groupBy === 'year' && !isNaN(Number(groupKey));
+              const year = isYearGroup ? Number(groupKey) : null;
+              const isExpanded = year ? expandedYears.includes(year) : true;
+
+              return (
+                <div key={groupKey} className="space-y-4">
+                  {/* Group Header */}
+                  {groupBy !== 'none' && (
+                    <button
+                      onClick={() => year && toggleYear(year)}
+                      className="flex items-center gap-2 text-lg font-semibold text-immich-fg dark:text-immich-dark-fg hover:text-immich-primary transition-colors"
+                      aria-expanded={isExpanded}
+                    >
+                      {isYearGroup && (
+                        <ChevronDown
+                          className={`w-5 h-5 transition-transform ${
+                            isExpanded ? '' : '-rotate-90'
+                          }`}
+                        />
+                      )}
+                      <span>{groupKey}</span>
+                      <span className="text-sm font-normal text-muted-foreground">
+                        ({groupAlbums.length} {groupAlbums.length === 1 ? 'album' : 'albums'})
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Albums Grid */}
+                  {isExpanded && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {groupAlbums.map((album) => (
+                        <div
+                          key={album.id}
+                          className="group bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border overflow-hidden hover:border-immich-primary/50 hover:shadow-lg transition-all duration-200 cursor-pointer"
+                          onClick={() => navigate(`/albums/${album.id}`)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              navigate(`/albums/${album.id}`);
+                            }
+                          }}
+                          aria-label={`Open album ${album.name}`}
+                        >
+                          {/* Cover Image */}
+                          <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-immich-primary/20 to-immich-primary/5">
+                            <img
+                              src={getCoverImage(album)}
+                              alt={album.name}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                            {/* Gradient Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                            
+                            {/* Album Info Overlay */}
+                            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                              <div className="flex items-center gap-2 mb-1">
+                                <ImageIcon className="w-4 h-4" />
+                                <span className="text-sm font-medium text-white-shadow">
+                                  {getPhotoCount(album.id) || album.photo_count || 0} {(getPhotoCount(album.id) || album.photo_count || 0) === 1 ? 'photo' : 'photos'}
+                                </span>
+                              </div>
+                              {album.is_shared && (
+                                <div className="flex items-center gap-1 text-xs text-white/80">
+                                  <Users className="w-3 h-3" />
+                                  <span>Shared</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions Menu */}
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                  <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="h-8 w-8 bg-black/50 hover:bg-black/70 text-white border-0"
+                                    aria-label="Album options"
+                                  >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuItem onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingAlbum(album);
+                                  }}>
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeletingAlbum(album);
+                                    }}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+
+                          {/* Album Details */}
+                          <div className="p-4 space-y-2">
+                            <h3 className="font-semibold text-immich-fg dark:text-immich-dark-fg line-clamp-1">
+                              {album.name || '(Untitled)'}
+                            </h3>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Calendar className="w-3 h-3" />
+                              <span className="line-clamp-1">
+                                {formatDateRange(album.oldest_photo || null, album.most_recent_photo || null)}
+                              </span>
+                            </div>
+                            {album.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {album.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Create Album Dialog */}
+      <AlbumDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSubmit={handleCreateAlbum}
+        isLoading={createAlbum.isPending}
+        mode="create"
+      />
+
+      {/* Edit Album Dialog */}
+      <AlbumDialog
+        open={!!editingAlbum}
+        onOpenChange={(open) => !open && setEditingAlbum(null)}
+        onSubmit={handleUpdateAlbum}
+        initialData={editingAlbum ? { name: editingAlbum.name, description: editingAlbum.description || '' } : undefined}
+        isLoading={updateAlbum.isPending}
+        mode="edit"
+      />
+
+      {/* Delete Album Dialog */}
+      <DeleteAlbumDialog
+        open={!!deletingAlbum}
+        onOpenChange={(open) => !open && setDeletingAlbum(null)}
+        onConfirm={handleDeleteAlbum}
+        albumName={deletingAlbum?.name || ''}
+        isLoading={deleteAlbum.isPending}
+      />
+    </Layout>
+  );
+}
