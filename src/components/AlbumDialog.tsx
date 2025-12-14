@@ -110,7 +110,7 @@ export function AlbumDialog({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter album name"
-                autoFocus
+                // autoFocus
                 required
               />
             </div>
