@@ -113,6 +113,16 @@ export function Sidebar() {
             </button>
           );
         })}
+         <Button 
+            variant="upload" 
+            size="default" 
+            className="w-full"
+            onClick={handleUploadClick}
+            aria-label="Upload photos"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload
+          </Button>
       </nav>
 
       {/* Spacer */}
@@ -183,16 +193,7 @@ export function Sidebar() {
             onChange={handleFileChange}
             aria-label="Upload photos"
           />
-          <Button 
-            variant="upload" 
-            size="default" 
-            className="w-full"
-            onClick={handleUploadClick}
-            aria-label="Upload photos"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Upload
-          </Button>
+         
           
           <Button 
             variant="secondary" 
