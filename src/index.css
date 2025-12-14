@@ -54,6 +54,7 @@
     --immich-fg: 0 0% 0%;
     --immich-gray: 220 14% 96%;
     --immich-card: 0 0% 96%;
+    --upload-button-color: #3eb3da;
     
     /* Gradients */
     --gradient-auth: linear-gradient(135deg, hsl(210 100% 12%) 0%, hsl(200 80% 20%) 50%, hsl(210 100% 12%) 100%);
@@ -108,6 +109,7 @@
     --immich-dark-fg: 220 14% 90%;
     --immich-dark-gray: 0 0% 13%;
     --immich-dark-primary: 213 90% 83%;
+    --upload-button-color: #3eb3da;
   }
 }
 

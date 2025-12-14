@@ -18,7 +18,7 @@ const buttonVariants = cva(
         auth: "bg-primary/90 text-primary-foreground hover:bg-primary shadow-xl shadow-primary/30 font-semibold",
         nav: "bg-primary text-primary-foreground hover:bg-primary/90",
         navOutline: "border border-border bg-secondary text-foreground hover:bg-accent",
-        upload: "bg-background text-foreground border-2 border-primary hover:bg-primary hover:text-primary-foreground font-semibold",
+        upload: "bg-[#3eb3da] text-white border-2 border-[#3eb3da] hover:bg-[#3eb3da]/90 hover:text-white font-semibold shadow-lg shadow-[#3eb3da]/25",
         danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg shadow-destructive/25",
       },
       size: {

@@ -374,7 +374,7 @@ export default function Photos() {
                 }}
                 aria-label="Upload photos"
               />
-              <Button onClick={() => fileInputRef.current?.click()}>
+              <Button onClick={() => fileInputRef.current?.click()} variant="upload" style={{ backgroundColor: '#3eb3da' }}>
                 <Upload className="w-4 h-4 mr-2" />
                 Upload photos
               </Button>
