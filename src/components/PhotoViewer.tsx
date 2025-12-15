@@ -11,8 +11,7 @@ import {
   Info,
   Download,
   Heart,
-  Share2,
-  Trash2
+  Share2
 } from 'lucide-react';
 
 interface Photo {
@@ -155,13 +154,6 @@ export function PhotoViewer({ photos, currentIndex, isOpen, onClose, onNavigate 
               variant="ghost"
               size="icon"
               className="text-white/70 hover:text-white hover:bg-white/10"
-            >
-              <Trash2 className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white/70 hover:text-white hover:bg-white/10"
               onClick={onClose}
             >
               <X className="h-5 w-5" />
@@ -172,7 +164,7 @@ export function PhotoViewer({ photos, currentIndex, isOpen, onClose, onNavigate 
         {/* Main image container */}
         <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
           <img
-            src={currentPhoto.src.replace('w=400', 'w=1920')}
+            src={currentPhoto.src.replace('w=1200&h=900&fit=crop&q=95', 'w=2560&h=1920&fit=crop&q=100')}
             alt={currentPhoto.alt}
             className="max-w-full max-h-full object-contain transition-transform duration-300 ease-out select-none"
             style={{
