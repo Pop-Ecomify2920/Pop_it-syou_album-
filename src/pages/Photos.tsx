@@ -18,22 +18,21 @@ const unsplashImageIds = [
   '1465146344425-f00d5f5c8f07', // Flowers
   '1426604966848-d7adac402bff', // Lake reflection
   '1470071459604-3b5ec3a7fe05', // Foggy mountains
-  // '1441974231531-c6227db76b6e', // Sunlit forest
+  '1441974231531-c6227db76b6e', // Sunlit forest
   '1519681393784-d120267933ba', // Mountain peak
   '1501594907352-04cda38ebc29', // Desert
-  '1519904981062-0a3b74f88edf', // Ocean
   '1506905925346-21bda4d32df4', // Landscape
   '1469474968028-56623f02e42e', // Nature
   '1447752875215-b2761acb3c5d', // Forest
   '1433086966358-54859d0ed716', // Water
-  // '1501854140801-50d01698950b', // Hills
-  // '1472214103451-9374bd1c798e', // Valley
-  // '1465146344425-f00d5f5c8f07', // Garden
-  // '1426604966848-d7adac402bff', // Lake
-  // '1470071459604-3b5ec3a7fe05', // Mountains
-  // '1441974231531-c6227db76b6e', // Trees
-  // '1519681393784-d120267933ba', // Peak
-  // '1501594907352-04cda38ebc29', // Sand
+  '1501854140801-50d01698950b', // Hills
+  '1472214103451-9374bd1c798e', // Valley
+  '1465146344425-f00d5f5c8f07', // Garden
+  '1426604966848-d7adac402bff', // Lake
+  '1470071459604-3b5ec3a7fe05', // Mountains
+  '1441974231531-c6227db76b6e', // Trees
+  '1519681393784-d120267933ba', // Peak
+  '1501594907352-04cda38ebc29', // Sand
   // '1519904981062-0a3b74f88edf', // Waves
   // '1506905925346-21bda4d32df4', // Scenery
   // '1469474968028-56623f02e42e', // Landscape
@@ -210,7 +209,7 @@ export default function Photos() {
           return (
             <div
               key={photo.id}
-              className="relative group cursor-pointer overflow-hidden rounded-lg"
+              className="relative group cursor-pointer overflow-hidden "
               style={{ width: `${width}px`, height: `${rowHeight}px` }}
               onClick={(e) => handlePhotoClick(photo.id, e)}
             >
@@ -556,7 +555,7 @@ export default function Photos() {
         {photos.map((photo) => (
           <div
             key={photo.id}
-            className="relative group cursor-pointer overflow-hidden rounded-sm aspect-[4/5]"
+            className="relative group cursor-pointer overflow-hidden  aspect-[4/5]"
             onClick={(e) => handlePhotoClick(photo.id, e)}
           >
             <img
