@@ -124,12 +124,13 @@ export function AlbumDialog({
                 rows={3}
               />
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-1 sm:gap-1">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleCancel}
                 disabled={isLoading}
+                className="mt-[10px] sm:mt-0"
               >
                 Cancel
               </Button>
@@ -216,7 +217,7 @@ export function AlbumDialog({
                 )}
               </div>
               
-              <DialogFooter>
+              <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 sm:gap-0">
                 <Button
                   type="button"
                   variant="outline"
@@ -230,6 +231,7 @@ export function AlbumDialog({
                   variant="outline"
                   onClick={handleCancel}
                   disabled={isLoading}
+                  className="mt-[15px] sm:mt-0"
                 >
                   Cancel
                 </Button>

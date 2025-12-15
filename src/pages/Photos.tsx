@@ -304,7 +304,7 @@ export default function Photos() {
       <div className="h-full flex flex-col bg-immich-bg dark:bg-immich-dark-bg">
         {/* Memory Lane Widget */}
         {showMemoryLane && hasPhotos && (
-          <div className="mb-6 p-4 bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border">
+          <div className="mb-6 pr-4 pl-4 pb-1 pt-1 bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-immich-primary/10 rounded-lg">

@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePhotos } from '@/hooks/usePhotos';
+import { PhotoViewer } from '@/components/PhotoViewer';
 import { 
   Search as SearchIcon, 
   SlidersHorizontal, 
@@ -29,23 +31,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 
-// Mock search results
-const mockAssets = [
-  { id: 1, type: 'image', title: 'Mountain landscape', date: '2025-01-15', src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400' },
-  { id: 2, type: 'image', title: 'Nature scene', date: '2025-01-14', src: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400' },
-  { id: 3, type: 'video', title: 'Forest path', date: '2025-01-13', src: 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=400' },
-];
-
-const mockAlbums = [
-  { id: 1, name: 'Vacation 2025', photoCount: 45 },
-  { id: 2, name: 'Family Photos', photoCount: 120 },
-];
-
-const mockPeople = [
-  { id: 1, name: 'John Doe', photoCount: 23 },
-  { id: 2, name: 'Jane Smith', photoCount: 15 },
-];
-
 type ResultType = 'all' | 'assets' | 'albums' | 'people';
 type SearchFilter = {
   dateRange?: { start: string; end: string };
@@ -69,6 +54,11 @@ export default function Search() {
   const [resultType, setResultType] = useState<ResultType>('all');
   const [filters, setFilters] = useState<SearchFilter>({});
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  
+  const { getAllPhotos } = usePhotos();
+  const allPhotos = getAllPhotos();
 
   // Update URL when query changes
   useEffect(() => {
@@ -130,12 +120,36 @@ export default function Search() {
 
   // Filter results based on query and filters
   const filteredAssets = useMemo(() => {
-    return mockAssets.filter(asset => {
-      if (query && !asset.title.toLowerCase().includes(query.toLowerCase())) return false;
-      if (filters.mediaType && filters.mediaType !== 'all' && asset.type !== filters.mediaType) return false;
+    return allPhotos.filter(asset => {
+      // Text search
+      if (query) {
+        const queryLower = query.toLowerCase();
+        const matchesAlt = asset.alt.toLowerCase().includes(queryLower);
+        const matchesDate = asset.date.toLowerCase().includes(queryLower);
+        if (!matchesAlt && !matchesDate) return false;
+      }
+
+      // Date range filter
+      if (filters.dateRange?.start || filters.dateRange?.end) {
+        const assetDate = new Date(asset.date);
+        if (filters.dateRange.start && assetDate < new Date(filters.dateRange.start)) return false;
+        if (filters.dateRange.end && assetDate > new Date(filters.dateRange.end)) return false;
+      }
+
       return true;
     });
-  }, [query, filters]);
+  }, [query, filters, allPhotos]);
+
+  // Mock albums and people for now
+  const mockAlbums = [
+    { id: 1, name: 'Vacation 2025', photoCount: 45 },
+    { id: 2, name: 'Family Photos', photoCount: 120 },
+  ];
+
+  const mockPeople = [
+    { id: 1, name: 'John Doe', photoCount: 23 },
+    { id: 2, name: 'Jane Smith', photoCount: 15 },
+  ];
 
   const filteredAlbums = useMemo(() => {
     return mockAlbums.filter(album => {
@@ -153,6 +167,11 @@ export default function Search() {
 
   const hasResults = filteredAssets.length > 0 || filteredAlbums.length > 0 || filteredPeople.length > 0;
   const showResults = query || activeFilters.length > 0;
+
+  const openPhotoViewer = (photoIndex: number) => {
+    setCurrentPhotoIndex(photoIndex);
+    setViewerOpen(true);
+  };
 
   return (
     <Layout>
@@ -296,28 +315,24 @@ export default function Search() {
             {(resultType === 'all' || resultType === 'assets') && filteredAssets.length > 0 && (
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold text-immich-fg dark:text-immich-dark-fg">
-                  Assets ({filteredAssets.length})
+                  Photos ({filteredAssets.length})
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
-                  {filteredAssets.map((asset) => (
+                  {filteredAssets.map((asset, idx) => (
                     <div
                       key={asset.id}
                       className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-immich-card dark:bg-immich-dark-gray"
+                      onClick={() => openPhotoViewer(idx)}
                     >
                       <img
                         src={asset.src}
-                        alt={asset.title}
+                        alt={asset.alt}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         loading="lazy"
                       />
-                      {asset.type === 'video' && (
-                        <div className="absolute top-2 right-2 bg-black/50 rounded px-2 py-1">
-                          <Video className="w-4 h-4 text-white" />
-                        </div>
-                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="absolute bottom-0 left-0 right-0 p-3 text-white text-sm">
-                          <p className="font-medium truncate">{asset.title}</p>
+                          <p className="font-medium truncate">{asset.alt}</p>
                           <p className="text-xs text-white/80">{format(new Date(asset.date), 'MMM d, yyyy')}</p>
                         </div>
                       </div>
@@ -384,13 +399,6 @@ export default function Search() {
                 </div>
               </div>
             )}
-
-            {/* Load More */}
-            {hasResults && (
-              <div className="flex justify-center pt-4">
-                <Button variant="outline">Load more results</Button>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -406,30 +414,6 @@ export default function Search() {
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {/* Search Type */}
-            <div className="space-y-2">
-              <Label>Search type</Label>
-              <div className="flex gap-4 flex-wrap">
-                {['Context', 'File name or extension', 'Description', 'OCR'].map((type) => (
-                  <label key={type} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="radio"
-                      name="searchType"
-                      className="accent-immich-primary"
-                      defaultChecked={type === 'Context'}
-                    />
-                    {type}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Search by context */}
-            <div className="space-y-2">
-              <Label>Search by context</Label>
-              <Input placeholder="Sunrise on the beach" />
-            </div>
-
             {/* Date Range */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -599,45 +583,26 @@ export default function Search() {
               </div>
             </div>
 
-            {/* Media Type & Display Options */}
-            <div className="grid grid-cols-2 gap-8">
+            {/* Display Options */}
+            <div className="space-y-2">
+              <Label>Display options</Label>
               <div className="space-y-2">
-                <Label>Media type</Label>
-                <div className="flex gap-4">
-                  {(['All', 'Image', 'Video'] as const).map((type) => (
-                    <label key={type} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="mediaType"
-                        className="accent-immich-primary"
-                        checked={filters.mediaType === (type === 'All' ? 'all' : type.toLowerCase()) || (!filters.mediaType && type === 'All')}
-                        onChange={() => handleFilterChange('mediaType', type === 'All' ? 'all' : type.toLowerCase())}
-                      />
-                      {type}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Display options</Label>
-                <div className="space-y-2">
-                  {[
-                    { key: 'notInAlbum', label: 'Not in any album' },
-                    { key: 'archived', label: 'Archive' },
-                    { key: 'favorites', label: 'Favorites' },
-                  ].map((option) => (
-                    <label key={option.key} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <Checkbox
-                        checked={filters.displayOptions?.[option.key as keyof typeof filters.displayOptions] || false}
-                        onCheckedChange={(checked) => handleFilterChange('displayOptions', {
-                          ...filters.displayOptions,
-                          [option.key]: checked,
-                        })}
-                      />
-                      {option.label}
-                    </label>
-                  ))}
-                </div>
+                {[
+                  { key: 'notInAlbum', label: 'Not in any album' },
+                  { key: 'archived', label: 'Archive' },
+                  { key: 'favorites', label: 'Favorites' },
+                ].map((option) => (
+                  <label key={option.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={filters.displayOptions?.[option.key as keyof typeof filters.displayOptions] || false}
+                      onCheckedChange={(checked) => handleFilterChange('displayOptions', {
+                        ...filters.displayOptions,
+                        [option.key]: checked,
+                      })}
+                    />
+                    {option.label}
+                  </label>
+                ))}
               </div>
             </div>
           </div>
@@ -653,6 +618,15 @@ export default function Search() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Photo Viewer Modal */}
+      <PhotoViewer
+        photos={filteredAssets}
+        currentIndex={currentPhotoIndex}
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        onNavigate={setCurrentPhotoIndex}
+      />
     </Layout>
   );
 }
