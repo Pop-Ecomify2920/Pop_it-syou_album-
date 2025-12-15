@@ -45,63 +45,79 @@ export function useAlbumsLocal() {
     setAlbums(loadAlbums());
   }, []);
 
-  const createAlbum = async (data: { name: string; description?: string; photoIds?: number[] }) => {
-    setIsLoading(true);
-    try {
-      const newAlbum: Album = {
-        id: `album_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: data.name,
-        description: data.description || null,
-        cover_photo_id: data.photoIds && data.photoIds.length > 0 ? String(data.photoIds[0]) : null,
-        is_shared: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: 'local_user',
-        photo_count: data.photoIds?.length || 0,
-      };
+  // Sync albums whenever they change in localStorage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setAlbums(loadAlbums());
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
-      const updated = [...albums, newAlbum];
-      setAlbums(updated);
-      saveAlbums(updated);
+  const createAlbum = (data: { name: string; description?: string; photoIds?: number[] }) => {
+    return new Promise<Album & { photoIds?: number[] }>((resolve, reject) => {
+      setIsLoading(true);
+      try {
+        const newAlbum: Album = {
+          id: `album_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: data.name,
+          description: data.description || null,
+          cover_photo_id: data.photoIds && data.photoIds.length > 0 ? String(data.photoIds[0]) : null,
+          is_shared: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          user_id: 'local_user',
+          photo_count: data.photoIds?.length || 0,
+        };
 
-      // Return the album with the photoIds for further processing
-      return { ...newAlbum, photoIds: data.photoIds };
-    } catch (error) {
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+        const updated = [...albums, newAlbum];
+        setAlbums(updated);
+        saveAlbums(updated);
+
+        setIsLoading(false);
+        resolve({ ...newAlbum, photoIds: data.photoIds });
+      } catch (error) {
+        setIsLoading(false);
+        reject(error);
+      }
+    });
   };
 
-  const updateAlbum = async (data: { id: string; name: string; description?: string }) => {
-    setIsLoading(true);
-    try {
-      const updated = albums.map(album =>
-        album.id === data.id
-          ? { ...album, name: data.name, description: data.description || null, updated_at: new Date().toISOString() }
-          : album
-      );
-      setAlbums(updated);
-      saveAlbums(updated);
-      return updated.find(a => a.id === data.id);
-    } catch (error) {
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+  const updateAlbum = (data: { id: string; name: string; description?: string }) => {
+    return new Promise<Album | undefined>((resolve, reject) => {
+      setIsLoading(true);
+      try {
+        const updated = albums.map(album =>
+          album.id === data.id
+            ? { ...album, name: data.name, description: data.description || null, updated_at: new Date().toISOString() }
+            : album
+        );
+        setAlbums(updated);
+        saveAlbums(updated);
+        setIsLoading(false);
+        resolve(updated.find(a => a.id === data.id));
+      } catch (error) {
+        setIsLoading(false);
+        reject(error);
+      }
+    });
   };
 
-  const deleteAlbum = async (id: string) => {
-    setIsLoading(true);
-    try {
-      const updated = albums.filter(album => album.id !== id);
-      setAlbums(updated);
-      saveAlbums(updated);
-    } catch (error) {
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+  const deleteAlbum = (id: string) => {
+    return new Promise<void>((resolve, reject) => {
+      setIsLoading(true);
+      try {
+        const updated = albums.filter(album => album.id !== id);
+        setAlbums(updated);
+        saveAlbums(updated);
+        setIsLoading(false);
+        resolve();
+      } catch (error) {
+        setIsLoading(false);
+        reject(error);
+      }
+    });
   };
 
   return {
@@ -109,41 +125,44 @@ export function useAlbumsLocal() {
     isLoading,
     error: null,
     createAlbum: {
-      mutate: async (data: { name: string; description?: string; photoIds?: number[] }, options?: { onSuccess?: (album: any) => void; onError?: (error: any) => void }) => {
-        try {
-          const result = await createAlbum(data);
-          toast.success('Album created successfully');
-          options?.onSuccess?.(result);
-        } catch (error: any) {
-          toast.error('Failed to create album: ' + (error.message || 'Unknown error'));
-          options?.onError?.(error);
-        }
+      mutate: (data: { name: string; description?: string; photoIds?: number[] }, options?: { onSuccess?: (album: Album & { photoIds?: number[] }) => void; onError?: (error: Error) => void }) => {
+        createAlbum(data)
+          .then((result) => {
+            toast.success('Album created successfully');
+            options?.onSuccess?.(result);
+          })
+          .catch((error: Error) => {
+            toast.error('Failed to create album: ' + (error.message || 'Unknown error'));
+            options?.onError?.(error);
+          });
       },
       isPending: isLoading,
     },
     updateAlbum: {
-      mutate: async (data: { id: string; name: string; description?: string }, options?: { onSuccess?: () => void; onError?: (error: any) => void }) => {
-        try {
-          await updateAlbum(data);
-          toast.success('Album updated successfully');
-          options?.onSuccess?.();
-        } catch (error: any) {
-          toast.error('Failed to update album: ' + (error.message || 'Unknown error'));
-          options?.onError?.(error);
-        }
+      mutate: (data: { id: string; name: string; description?: string }, options?: { onSuccess?: () => void; onError?: (error: Error) => void }) => {
+        updateAlbum(data)
+          .then(() => {
+            toast.success('Album updated successfully');
+            options?.onSuccess?.();
+          })
+          .catch((error: Error) => {
+            toast.error('Failed to update album: ' + (error.message || 'Unknown error'));
+            options?.onError?.(error);
+          });
       },
       isPending: isLoading,
     },
     deleteAlbum: {
-      mutate: async (id: string, options?: { onSuccess?: () => void; onError?: (error: any) => void }) => {
-        try {
-          await deleteAlbum(id);
-          toast.success('Album deleted successfully');
-          options?.onSuccess?.();
-        } catch (error: any) {
-          toast.error('Failed to delete album: ' + (error.message || 'Unknown error'));
-          options?.onError?.(error);
-        }
+      mutate: (id: string, options?: { onSuccess?: () => void; onError?: (error: Error) => void }) => {
+        deleteAlbum(id)
+          .then(() => {
+            toast.success('Album deleted successfully');
+            options?.onSuccess?.();
+          })
+          .catch((error: Error) => {
+            toast.error('Failed to delete album: ' + (error.message || 'Unknown error'));
+            options?.onError?.(error);
+          });
       },
       isPending: isLoading,
     },

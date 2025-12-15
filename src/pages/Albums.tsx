@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Search, Plus, ChevronDown, LayoutGrid, Pencil, Trash2, MoreHorizontal, Calendar, Image as ImageIcon, Users, FolderOpen } from 'lucide-react';
 import { useAlbums, Album } from '@/hooks/useAlbums';
 import { useAlbumsLocal } from '@/hooks/useAlbumsLocal';
+import { usePhotos } from '@/hooks/usePhotos';
 import { AlbumDialog } from '@/components/AlbumDialog';
 import { DeleteAlbumDialog } from '@/components/DeleteAlbumDialog';
 import { useAlbumPhotos } from '@/hooks/useAlbumPhotos';
@@ -43,7 +44,8 @@ export default function Albums() {
 
   // Use local storage version for albums (works without Supabase auth)
   const { albums, isLoading, createAlbum, updateAlbum, deleteAlbum } = useAlbumsLocal();
-  const { addPhotosToAlbum, getPhotoCount, removeAllPhotosFromAlbum } = useAlbumPhotos();
+  const { addPhotosToAlbum, getPhotoCount, removeAllPhotosFromAlbum, getAlbumPhotos } = useAlbumPhotos();
+  const { getAllPhotos } = usePhotos();
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'all', label: 'All' },
@@ -162,10 +164,25 @@ export default function Albums() {
     });
   };
 
+  // Get first photo from album as cover image
   const getCoverImage = (album: Album) => {
-    // In a real app, this would fetch the cover photo
-    // For now, return a placeholder gradient
-    return `https://images.unsplash.com/photo-${1500000000000 + parseInt(album.id.slice(0, 8), 16)}?w=400`;
+    // Get all available photos
+    const allPhotos = getAllPhotos();
+    
+    // Get photo IDs for this album
+    const photoIds = getAlbumPhotos(album.id);
+    
+    // Find the first photo in the album
+    if (photoIds && photoIds.length > 0) {
+      const firstPhotoId = photoIds[0];
+      const firstPhoto = allPhotos.find(p => p.id === firstPhotoId);
+      if (firstPhoto) {
+        return firstPhoto.src;
+      }
+    }
+    
+    // Fallback to a solid color background if no photos
+    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%234f46e5' width='400' height='400'/%3E%3C/svg%3E`;
   };
 
   return (
@@ -182,6 +199,12 @@ export default function Albums() {
 
           {/* Header Controls */}
           <div className="flex items-center gap-3 flex-wrap">
+            {/* Create Button - First Priority */}
+            <Button style={{ display: 'flex', alignItems: 'center'}} variant="default" size="sm" onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              <p style={{lineHeight : "normal"}}>Create album</p>
+            </Button>
+
             {/* Tabs - Mobile */}
             <div className="flex items-center gap-1 bg-secondary rounded-lg p-1 md:hidden">
               {tabs.map((tab) => (
@@ -204,7 +227,7 @@ export default function Albums() {
             </div>
 
             {/* Search */}
-            <div className="relative">
+            {/* <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
@@ -214,10 +237,10 @@ export default function Albums() {
                 className="pl-9 w-48 md:w-64"
                 aria-label="Search albums"
               />
-            </div>
+            </div> */}
 
             {/* Sort */}
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+            {/* <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -226,10 +249,10 @@ export default function Albums() {
                 <SelectItem value="name">By name</SelectItem>
                 <SelectItem value="recent">Most recent</SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
 
             {/* Group By */}
-            <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupOption)}>
+            {/* <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupOption)}>
               <SelectTrigger className="w-36">
                 <SelectValue placeholder="Group by" />
               </SelectTrigger>
@@ -238,18 +261,12 @@ export default function Albums() {
                 <SelectItem value="year">By year</SelectItem>
                 <SelectItem value="owner">By owner</SelectItem>
               </SelectContent>
-            </Select>
-
-            {/* Create Button */}
-            <Button style={{ display: 'flex', alignItems: 'center'}} variant="default" size="sm" onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-1" />
-              <p style={{lineHeight : "normal"}}>Create album</p>
-            </Button>
+            </Select> */}
           </div>
         </div>
 
         {/* Tabs - Desktop */}
-        <div className="hidden md:flex items-center gap-1 bg-secondary rounded-lg p-1 w-fit">
+        {/* <div className="hidden md:flex items-center gap-1 bg-secondary rounded-lg p-1 w-fit">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -267,14 +284,14 @@ export default function Albums() {
               <div style={{marginTop : "4px"}}>{tab.label}</div>
             </button>
           ))}
-        </div>
+        </div> */}
 
         {/* Content */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-0.5">
             {[...Array(10)].map((_, i) => (
               <div key={i} className="bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border overflow-hidden">
-                <Skeleton className="w-full aspect-square" />
+                <Skeleton className="w-full aspect-[4/5]" />
                 <div className="p-4 space-y-2">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
@@ -348,11 +365,11 @@ export default function Albums() {
 
                   {/* Albums Grid */}
                   {isExpanded && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-0.5">
                       {groupAlbums.map((album) => (
                         <div
                           key={album.id}
-                          className="group bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border overflow-hidden hover:border-immich-primary/50 hover:shadow-lg transition-all duration-200 cursor-pointer"
+                          className="group bg-immich-card dark:bg-immich-dark-gray  border border-border overflow-hidden hover:border-immich-primary/50 hover:shadow-lg transition-all duration-200 cursor-pointer"
                           onClick={() => navigate(`/albums/${album.id}`)}
                           role="button"
                           tabIndex={0}
@@ -365,7 +382,7 @@ export default function Albums() {
                           aria-label={`Open album ${album.name}`}
                         >
                           {/* Cover Image */}
-                          <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-immich-primary/20 to-immich-primary/5">
+                          <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-immich-primary/20 to-immich-primary/5">
                             <img
                               src={getCoverImage(album)}
                               alt={album.name}
@@ -376,13 +393,14 @@ export default function Albums() {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                             
                             {/* Album Info Overlay */}
-                            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                            <div className="absolute bottom-0 left-0 right-0 pl-1 leading-none pt-1 pb-1 text-white">
                               <div className="flex items-center gap-2 mb-1">
                                 <ImageIcon className="w-4 h-4" />
                                 <span className="text-sm font-medium text-white-shadow">
                                   {getPhotoCount(album.id) || album.photo_count || 0} {(getPhotoCount(album.id) || album.photo_count || 0) === 1 ? 'photo' : 'photos'}
                                 </span>
                               </div>
+                              <div style={{fontSize : "12px"}}>{album.name || '(Untitled)'}</div>
                               {album.is_shared && (
                                 <div className="flex items-center gap-1 text-xs text-white/80">
                                   <Users className="w-3 h-3" />
@@ -429,7 +447,7 @@ export default function Albums() {
                           </div>
 
                           {/* Album Details */}
-                          <div className="p-4 space-y-2">
+                          {/* <div className="p-4 space-y-2">
                             <h3 className="font-semibold text-immich-fg dark:text-immich-dark-fg line-clamp-1">
                               {album.name || '(Untitled)'}
                             </h3>
@@ -444,7 +462,7 @@ export default function Albums() {
                                 {album.description}
                               </p>
                             )}
-                          </div>
+                          </div> */}
                         </div>
                       ))}
                     </div>
