@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { PhotoViewer } from '@/components/PhotoViewer';
 import { Button } from '@/components/ui/button';
-import { Upload, Sparkles } from 'lucide-react';
+import { Upload, Sparkles, X as CloseIcon } from 'lucide-react';
 import { usePhotos, Photo as PhotoType } from '@/hooks/usePhotos';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -40,26 +41,56 @@ const unsplashImageIds = [
   // '1433086966358-54859d0ed716', // Stream
 ];
 
-// Mock photo data - expanded for better demonstration
+// Mock photo data - with better descriptive names for search testing
 const generateMockPhotos = () => {
   const dates = ['Today', 'Wednesday', 'Sunday', 'Saturday', 'Friday', 'Thursday', 'Tuesday', 'Monday'];
+  const photoNames = [
+    'Mountain landscape',
+    'Nature scene',
+    'Forest path',
+    'Waterfall view',
+    'Green hills',
+    'Valley view',
+    'Flowers garden',
+    'Lake reflection',
+    'Foggy mountains',
+    'Sunlit forest',
+    'Mountain peak',
+    'Desert sand',
+    'Ocean wave',
+    'River stream',
+    'Sunset sky',
+    'Morning dew',
+    'Beach shore',
+    'Tree canopy',
+    'Rocky cliff',
+    'Meadow field',
+    'Stone bridge',
+    'Canyon view',
+    'Glacier ice',
+    'Prairie grass',
+  ];
+  
   const photos = [];
   let id = 1;
   let imageIndex = 0;
+  let nameIndex = 0;
   
-  dates.forEach((date, dateIdx) => {
+  dates.forEach((date) => {
     const count = date === 'Today' ? 8 : Math.floor(Math.random() * 6) + 3;
     for (let i = 0; i < count; i++) {
       const imageId = unsplashImageIds[imageIndex % unsplashImageIds.length];
+      const photoName = photoNames[nameIndex % photoNames.length];
       photos.push({
         id: id++,
         date,
         src: `https://images.unsplash.com/photo-${imageId}?w=1200&h=900&fit=crop&q=95`,
-        alt: `Photo ${id} - ${date}`,
+        alt: photoName,
         width: 400 + Math.random() * 200,
         height: 300 + Math.random() * 300,
       });
       imageIndex++;
+      nameIndex++;
     }
   });
   
@@ -79,6 +110,8 @@ interface Photo {
 }
 
 export default function Photos() {
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('q') || '';
   const { uploadedPhotos, uploadMultiplePhotos } = usePhotos();
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -105,16 +138,25 @@ export default function Photos() {
     return [...uploaded, ...mockPhotos];
   }, [uploadedPhotos]);
 
-  // Group photos by date
+  // Filter photos by search query
+  const filteredPhotos = useMemo(() => {
+    if (!searchQuery.trim()) return allPhotos;
+    
+    return allPhotos.filter(photo =>
+      photo.alt.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [allPhotos, searchQuery]);
+
+  // Group filtered photos by date
   const groupedPhotos = useMemo(() => {
-    return allPhotos.reduce<Record<string, Photo[]>>((acc, photo) => {
+    return filteredPhotos.reduce<Record<string, Photo[]>>((acc, photo) => {
       if (!acc[photo.date]) {
         acc[photo.date] = [];
       }
       acc[photo.date].push(photo);
       return acc;
     }, {});
-  }, [allPhotos]);
+  }, [filteredPhotos]);
 
   // Virtual scrolling with intersection observer
   useEffect(() => {
@@ -302,8 +344,29 @@ export default function Photos() {
   return (
     <Layout>
       <div className="h-full flex flex-col bg-immich-bg dark:bg-immich-dark-bg">
+        {/* Search Results Header */}
+        {searchQuery && (
+          <div className="mb-4 p-4 bg-immich-primary/10 dark:bg-immich-primary/20 rounded-lg border border-immich-primary/30 flex items-center justify-between">
+            <div>
+              <p className="text-sm text-immich-fg dark:text-immich-dark-fg">
+                Search results for: <span className="font-semibold">"{searchQuery}"</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Found {filteredPhotos.length} photo{filteredPhotos.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <a
+              href="/photos"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-immich-fg dark:text-immich-dark-fg hover:bg-immich-primary/20 rounded-lg transition-colors"
+            >
+              <CloseIcon className="w-4 h-4" />
+              Clear
+            </a>
+          </div>
+        )}
+
         {/* Memory Lane Widget */}
-        {showMemoryLane && hasPhotos && (
+        {showMemoryLane && filteredPhotos.length > 0 && (
           <div className="mb-6 pr-4 pl-4 pb-1 pt-1 bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -328,7 +391,7 @@ export default function Photos() {
         )}
 
         {/* Main Content */}
-        {!hasPhotos ? (
+        {filteredPhotos.length === 0 ? (
           /* Empty State */
           <div className="flex-1 flex items-center justify-center py-20">
             <div className="bg-immich-card dark:bg-immich-dark-gray rounded-3xl p-12 text-center max-w-lg border border-border">
@@ -340,47 +403,63 @@ export default function Photos() {
                 </div>
               </div>
               <h2 className="text-xl font-semibold text-immich-fg dark:text-immich-dark-fg mb-2">
-                No photos yet
+                {searchQuery ? 'No photos found' : 'No photos yet'}
               </h2>
               <p className="text-muted-foreground mb-6">
-                Upload your first photo to get started
+                {searchQuery 
+                  ? `No photos match your search for "${searchQuery}"`
+                  : 'Upload your first photo to get started'
+                }
               </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={async (e) => {
-                  const files = e.target.files;
-                  if (!files || files.length === 0) return;
-                  
-                  const imageFiles = Array.from(files).filter(file => 
-                    file.type.startsWith('image/')
-                  );
-                  
-                  if (imageFiles.length > 0) {
-                    try {
-                      toast.loading(`Uploading ${imageFiles.length} photo(s)...`);
-                      await uploadMultiplePhotos(imageFiles);
-                      toast.success(`Successfully uploaded ${imageFiles.length} photo(s)!`);
-                    } catch (error) {
-                      toast.error('Failed to upload photos: ' + (error instanceof Error ? error.message : 'Unknown error'));
+              {!searchQuery && (
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return;
+                    
+                    const imageFiles = Array.from(files).filter(file => 
+                      file.type.startsWith('image/')
+                    );
+                    
+                    if (imageFiles.length > 0) {
+                      try {
+                        toast.loading(`Uploading ${imageFiles.length} photo(s)...`);
+                        await uploadMultiplePhotos(imageFiles);
+                        toast.success(`Successfully uploaded ${imageFiles.length} photo(s)!`);
+                      } catch (error) {
+                        toast.error('Failed to upload photos: ' + (error instanceof Error ? error.message : 'Unknown error'));
+                      }
+                    } else {
+                      toast.error('Please select image files only');
                     }
-                  } else {
-                    toast.error('Please select image files only');
-                  }
-                  
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                  }
-                }}
-                aria-label="Upload photos"
-              />
-              <Button onClick={() => fileInputRef.current?.click()} variant="upload" style={{ backgroundColor: '#3eb3da' }}>
-                <Upload className="w-4 h-4 mr-2" />
-                Upload photos
-              </Button>
+                    
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = '';
+                    }
+                  }}
+                  aria-label="Upload photos"
+                />
+              )}
+              {!searchQuery && (
+                <Button onClick={() => fileInputRef.current?.click()} variant="upload" style={{ backgroundColor: '#3eb3da' }}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload photos
+                </Button>
+              )}
+              {searchQuery && (
+                <a
+                  href="/photos"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-immich-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+                >
+                  <CloseIcon className="w-4 h-4" />
+                  Clear search
+                </a>
+              )}
             </div>
           </div>
         ) : (
