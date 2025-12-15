@@ -185,16 +185,16 @@ export default function Albums() {
             {/* Tabs - Mobile */}
             <div className="flex items-center gap-1 bg-secondary rounded-lg p-1 md:hidden">
               {tabs.map((tab) => (
-                <button
+                <button 
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center justify-center h-9 ${
+                  className={` px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center justify-center h-9 ${
                     activeTab === tab.id
                       ? 'text-white'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                   style={{
-                    backgroundColor: activeTab === tab.id ? '#a855f7' : 'transparent'
+                  backgroundColor: activeTab === tab.id ? '#a855f7' : 'transparent'
                   }}
                   aria-label={`Filter ${tab.label} albums`}
                 >
@@ -241,9 +241,9 @@ export default function Albums() {
             </Select>
 
             {/* Create Button */}
-            <Button variant="default" size="sm" onClick={() => setCreateDialogOpen(true)}>
+            <Button style={{ display: 'flex', alignItems: 'center'}} variant="default" size="sm" onClick={() => setCreateDialogOpen(true)}>
               <Plus className="w-4 h-4 mr-1" />
-              Create album
+              <p style={{lineHeight : "normal"}}>Create album</p>
             </Button>
           </div>
         </div>
@@ -254,8 +254,8 @@ export default function Albums() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center h-9 ${
-                activeTab === tab.id
+              className={`px-4 py-1 rounded-md text-sm font-medium transition-all flex items-center justify-center h-9 ${
+                activeTab === tab.id 
                   ? 'text-white'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
@@ -264,7 +264,7 @@ export default function Albums() {
               }}
               aria-label={`Filter ${tab.label} albums`}
             >
-              {tab.label}
+              <div style={{marginTop : "4px"}}>{tab.label}</div>
             </button>
           ))}
         </div>
@@ -305,12 +305,12 @@ export default function Albums() {
                   ? 'No albums found matching your search'
                   : activeTab === 'shared'
                     ? 'No shared albums yet'
-                    : 'Create an album to organize your photos and videos'}
+                    : 'Create an album to organize your photos'}
               </p>
               {!searchQuery && (
                 <Button onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create album
+                  <p style={{lineHeight : ".5"}}>Create album</p>
                 </Button>
               )}
             </div>

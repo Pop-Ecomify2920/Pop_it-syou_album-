@@ -9,17 +9,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        auth: "bg-primary/90 text-primary-foreground hover:bg-primary shadow-xl shadow-primary/30 font-semibold",
+        auth: "bg-primary/90 text-primary-foreground hover:bg-primary font-semibold",
         nav: "bg-primary text-primary-foreground hover:bg-primary/90",
         navOutline: "border border-border bg-secondary text-foreground hover:bg-accent",
-        upload: "bg-[#3eb3da] text-white border-2 border-[#3eb3da] hover:bg-[#3eb3da]/90 hover:text-white font-semibold shadow-lg shadow-[#3eb3da]/25",
-        danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg shadow-destructive/25",
+        upload: "bg-[#3eb3da] text-white border-2 border-[#3eb3da] hover:bg-[#3eb3da]/90 hover:text-white font-semibold",
+        danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
       },
       size: {
         default: "h-10 px-4 py-2",

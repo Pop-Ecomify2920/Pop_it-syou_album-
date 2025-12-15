@@ -132,10 +132,10 @@ export function AlbumDialog({
                 disabled={isLoading}
                 className="mt-[10px] sm:mt-0"
               >
-                Cancel
+                <div style={{marginTop : "4px"}}>Cancel</div>
               </Button>
               <Button type="submit" disabled={!name.trim() || isLoading}>
-                {mode === 'create' ? 'Next: Select Photos' : 'Save'}
+                <div style={{marginTop : "4px"}}>{mode === 'create' ? 'Next: Select Photos' : 'Save'}</div>
               </Button>
             </DialogFooter>
           </form>

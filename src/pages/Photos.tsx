@@ -367,27 +367,28 @@ export default function Photos() {
 
         {/* Memory Lane Widget */}
         {showMemoryLane && filteredPhotos.length > 0 && (
-          <div className="mb-6 pr-4 pl-4 pb-1 pt-1 bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-immich-primary/10 rounded-lg">
-                  <Sparkles className="w-5 h-5 text-immich-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-immich-fg dark:text-immich-dark-fg">Memory Lane</h3>
-                  <p className="text-sm text-muted-foreground">Photos from this day in previous years</p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowMemoryLane(false)}
-                aria-label="Hide Memory Lane"
-              >
-                Hide
-              </Button>
-            </div>
-          </div>
+          // <div className="mb-6 pr-4 pl-4 pb-1 pt-1 bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border">
+          //   <div className="flex items-center justify-between">
+          //     <div className="flex items-center gap-3">
+          //       <div className="p-2 bg-immich-primary/10 rounded-lg">
+          //         <Sparkles className="w-5 h-5 text-immich-primary" />
+          //       </div>
+          //       <div>
+          //         <h3 className="font-semibold text-immich-fg dark:text-immich-dark-fg">Memory Lane</h3>
+          //         <p className="text-sm text-muted-foreground">Photos from this day in previous years</p>
+          //       </div>
+          //     </div>
+          //     <Button
+          //       variant="ghost"
+          //       size="sm"
+          //       onClick={() => setShowMemoryLane(false)}
+          //       aria-label="Hide Memory Lane"
+          //     >
+          //       Hide
+          //     </Button>
+          //   </div>
+          // </div>
+          <div></div>
         )}
 
         {/* Main Content */}
@@ -485,7 +486,7 @@ export default function Photos() {
                     className="space-y-3"
                   >
                     {/* Date Header */}
-                    <h2 className="text-lg font-semibold pl-4 text-immich-fg dark:text-immich-dark-fg sticky top-0 z-10 bg-immich-bg dark:bg-immich-dark-bg py-2">
+                    <h2 className="text-lg font-semibold pl-4 text-immich-fg dark:text-immich-dark-fg sticky top-2 z-10 bg-immich-bg dark:bg-immich-dark-bg py-2">
                       {date}
                     </h2>
                     
