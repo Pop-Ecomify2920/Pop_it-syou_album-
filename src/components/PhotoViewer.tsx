@@ -11,7 +11,9 @@ import {
   Info,
   Download,
   Heart,
-  Share2
+  Share2,
+  Play,
+  Pause
 } from 'lucide-react';
 
 interface Photo {
@@ -31,17 +33,29 @@ interface PhotoViewerProps {
 
 // Optimize image URL - use smaller size for faster loading
 const getOptimizedImageUrl = (originalUrl: string, quality: 'thumb' | 'display' | 'full'): string => {
-  const baseUrl = originalUrl.split('?')[0];
-  const params = new URLSearchParams(originalUrl.split('?')[1] || '');
+  if (!originalUrl) return '';
   
-  switch (quality) {
-    case 'thumb':
-      return `${baseUrl}?w=800&h=600&fit=crop&q=80`; // Fast thumbnail
-    case 'display':
-      return `${baseUrl}?w=1600&h=1200&fit=crop&q=90`; // Display size
-    case 'full':
-      return `${baseUrl}?w=2560&h=1920&fit=crop&q=95`; // Full quality (only when zoomed)
+  // If it's a data URL or blob, return as-is (no optimization needed)
+  if (originalUrl.startsWith('data:') || originalUrl.startsWith('blob:')) {
+    return originalUrl;
   }
+
+  // For Unsplash URLs, optimize with parameters
+  if (originalUrl.includes('unsplash.com') || originalUrl.includes('images.unsplash.com')) {
+    const baseUrl = originalUrl.split('?')[0];
+    
+    switch (quality) {
+      case 'thumb':
+        return `${baseUrl}?w=800&h=600&fit=crop&q=80`;
+      case 'display':
+        return `${baseUrl}?w=1600&h=1200&fit=crop&q=90`;
+      case 'full':
+        return `${baseUrl}?w=2560&h=1920&fit=crop&q=95`;
+    }
+  }
+
+  // For other URLs (local files, etc.), return as-is
+  return originalUrl;
 };
 
 // Image preloader component
@@ -72,6 +86,8 @@ export function PhotoViewer({ photos, currentIndex, isOpen, onClose, onNavigate 
   const [showDetails, setShowDetails] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [imageQuality, setImageQuality] = useState<'thumb' | 'display'>('display');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const slideshowInterval = useRef<NodeJS.Timeout | null>(null);
 
   // Preload images for faster navigation
   useImagePreloader(photos, currentIndex);
@@ -120,6 +136,29 @@ export function PhotoViewer({ photos, currentIndex, isOpen, onClose, onNavigate 
   const handleRotate = useCallback(() => {
     setRotation(prev => (prev + 90) % 360);
   }, []);
+
+  const toggleSlideshow = useCallback(() => {
+    setIsPlaying(prev => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (isPlaying) {
+      slideshowInterval.current = setInterval(() => {
+        handleNext();
+      }, 3000);
+    } else {
+      if (slideshowInterval.current) {
+        clearInterval(slideshowInterval.current);
+        slideshowInterval.current = null;
+      }
+    }
+
+    return () => {
+      if (slideshowInterval.current) {
+        clearInterval(slideshowInterval.current);
+      }
+    };
+  }, [isPlaying, handleNext]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -208,6 +247,14 @@ export function PhotoViewer({ photos, currentIndex, isOpen, onClose, onNavigate 
               onClick={() => setShowDetails(!showDetails)}
             >
               <Info className={`h-5 w-5 ${showDetails ? 'text-primary' : ''}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white/70 hover:text-white hover:bg-white/10"
+              onClick={toggleSlideshow}
+            >
+              {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
             </Button>
             <Button
               variant="ghost"
