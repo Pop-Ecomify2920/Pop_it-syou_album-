@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Upload, Sparkles } from 'lucide-react';
 import { usePhotos, Photo as PhotoType } from '@/hooks/usePhotos';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Valid Unsplash image IDs for demonstration
 const unsplashImageIds = [
@@ -91,6 +92,7 @@ export default function Photos() {
   const dateRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   // Combine uploaded photos with mock photos
   // Uploaded photos go to "Today" group, mock photos keep their dates
@@ -242,10 +244,10 @@ export default function Photos() {
                 role="checkbox"
                 aria-checked={selectedPhotos.includes(photo.id)}
                 tabIndex={0}
-                onKeyDown={(e) => {
+                onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    toggleSelect(photo.id, e as any);
+                    toggleSelect(photo.id, e as unknown as React.MouseEvent);
                   }
                 }}
               >
@@ -383,16 +385,18 @@ export default function Photos() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex gap-4 overflow-hidden relative">
+          <div className={`flex-1 flex gap-4 overflow-hidden relative ${isMobile ? 'flex-col' : ''}`}>
             {/* Main Content Area */}
-            <div ref={contentRef} className="flex-1 overflow-auto scrollbar-hidden">
-              <div className="space-y-8 pb-6">
-                {/* Year indicator */}
-                <div className="flex justify-end sticky top-0 z-10 bg-immich-bg dark:bg-immich-dark-bg py-2">
-                  <span className="text-sm text-immich-primary font-medium px-3 py-1 rounded border border-immich-primary/30 bg-immich-card dark:bg-immich-dark-gray">
-                    2025
-                  </span>
-                </div>
+            <div ref={contentRef} className={`flex-1 overflow-auto scrollbar-hidden res-gallery ${isMobile ? 'w-full' : ''}`}>
+              <div className="">
+                {/* Year indicator - Only show on desktop */}
+                {!isMobile && (
+                  <div className="flex justify-end sticky top-0 z-10 bg-immich-bg dark:bg-immich-dark-bg py-2">
+                    <span className="text-sm text-immich-primary font-medium px-3 py-1 rounded border border-immich-primary/30 bg-immich-card dark:bg-immich-dark-gray">
+                      2025
+                    </span>
+                  </div>
+                )}
 
                 {/* Photo Groups with Virtual Scrolling */}
                 {Object.entries(groupedPhotos).map(([date, photos]) => (
@@ -403,101 +407,103 @@ export default function Photos() {
                     className="space-y-3"
                   >
                     {/* Date Header */}
-                    <h2 className="text-lg font-semibold text-immich-fg dark:text-immich-dark-fg sticky top-12 z-10 bg-immich-bg dark:bg-immich-dark-bg py-2">
+                    <h2 className="text-lg font-semibold pl-4 text-immich-fg dark:text-immich-dark-fg sticky top-0 z-10 bg-immich-bg dark:bg-immich-dark-bg py-2">
                       {date}
                     </h2>
                     
-                    {/* Justified Photo Grid */}
-                    {renderPhotoGrid(photos)}
+                    {/* Photo Grid - Responsive */}
+                    {isMobile ? renderPhotoGridMobile(photos) : renderPhotoGrid(photos)}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Timeline Slider - Right Side */}
-            <div className="relative w-16 flex flex-col items-center justify-between py-8 px-2 bg-immich-card dark:bg-immich-dark-gray border-l border-border group">
-              {/* Timeline track background */}
-              <div className="absolute inset-y-8 left-1/2 -translate-x-1/2 w-1 bg-gradient-to-b from-blue-500/20 via-purple-500/20 to-blue-500/20 rounded-full" />
-              
-              {/* Month/Year indicators - visible on hover */}
-              <div className="absolute right-0 top-0 bottom-0 w-32 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto flex flex-col justify-between py-8 z-50">
-                {Object.entries(groupedPhotos).map(([date, _], index) => {
-                  const percentage = (index / (Object.keys(groupedPhotos).length - 1 || 1)) * 100;
-                  return (
-                    <button
-                      key={date}
-                      onClick={() => {
-                        setSelectedDateIndex(index);
-                        const element = dateRefs.current.get(date);
+            {/* Timeline Slider - Right Side (Hidden on Mobile) */}
+            {!isMobile && (
+              <div className="relative w-16 flex flex-col items-center justify-between py-8 px-2 bg-immich-card dark:bg-immich-dark-gray border-l border-border">
+                {/* Timeline track background */}
+                <div className="absolute inset-y-8 left-1/2 -translate-x-1/2 w-1 bg-gradient-to-b from-blue-500/20 via-purple-500/20 to-blue-500/20 rounded-full" />
+                
+                {/* Month/Year indicators - visible on hover */}
+                <div className="absolute right-0 top-0 bottom-0 w-32 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto flex flex-col justify-between py-8 z-50">
+                  {Object.entries(groupedPhotos).map(([date, _], index) => {
+                    const percentage = (index / (Object.keys(groupedPhotos).length - 1 || 1)) * 100;
+                    return (
+                      <button
+                        key={date}
+                        onClick={() => {
+                          setSelectedDateIndex(index);
+                          const element = dateRefs.current.get(date);
+                          element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }}
+                        className="absolute right-0 px-3 py-1.5 bg-immich-bg dark:bg-immich-dark-gray rounded-lg border border-immich-primary/40 text-xs font-semibold text-immich-primary whitespace-nowrap hover:bg-immich-primary hover:text-white transition-all cursor-pointer z-50"
+                        style={{
+                          top: `${percentage}%`,
+                          transform: 'translateY(-50%)',
+                        }}
+                        aria-label={`Jump to ${date}`}
+                      >
+                        {date.includes('2025') ? date : `${date} 2025`}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Slider Track */}
+                <div className="flex-1 flex flex-col items-center justify-between h-full relative">
+                  {/* Interactive vertical slider */}
+                  <input
+                    type="range"
+                    min="0"
+                    max={Math.max(0, Object.keys(groupedPhotos).length - 1)}
+                    value={selectedDateIndex}
+                    onChange={(e) => {
+                      const index = parseInt(e.target.value);
+                      setSelectedDateIndex(index);
+                      
+                      // Scroll to selected date
+                      const dateKeys = Object.keys(groupedPhotos);
+                      if (dateKeys[index]) {
+                        const element = dateRefs.current.get(dateKeys[index]);
                         element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }}
-                      className="absolute right-0 px-3 py-1.5 bg-immich-bg dark:bg-immich-dark-gray rounded-lg border border-immich-primary/40 text-xs font-semibold text-immich-primary whitespace-nowrap hover:bg-immich-primary hover:text-white transition-all cursor-pointer z-50"
-                      style={{
-                        top: `${percentage}%`,
-                        transform: 'translateY(-50%)',
-                      }}
-                      aria-label={`Jump to ${date}`}
-                    >
-                      {date.includes('2025') ? date : `${date} 2025`}
-                    </button>
-                  );
-                })}
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    style={{ writingMode: 'vertical-rl' } as React.CSSProperties}
+                    aria-label="Timeline slider"
+                  />
+
+                  {/* Slider indicator dot */}
+                  <div 
+                    className="absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full pointer-events-none transition-all duration-150 z-20"
+                    style={{
+                      top: `${(selectedDateIndex / (Object.keys(groupedPhotos).length - 1 || 1)) * 100}%`,
+                      boxShadow: '0 0 10px rgba(14, 165, 233, 0.8), 0 0 20px rgba(168, 85, 247, 0.4)',
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  />
+
+                  {/* Slider indicator line */}
+                  <div 
+                    className="absolute left-1/2 -translate-x-1/2 w-6 h-0.5 bg-blue-500 pointer-events-none transition-all duration-150 z-20"
+                    style={{
+                      top: `${(selectedDateIndex / (Object.keys(groupedPhotos).length - 1 || 1)) * 100}%`,
+                      boxShadow: '0 0 8px rgba(14, 165, 233, 0.6)',
+                    }}
+                  />
+                </div>
+
+                {/* Static Year Label at Top */}
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 text-xs font-semibold text-immich-primary pointer-events-none">
+                  2025
+                </div>
+
+                {/* Current Date Display at Bottom - visible on hover */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-immich-bg dark:bg-immich-dark-gray rounded-lg border border-immich-primary/30 text-xs font-semibold text-immich-primary whitespace-nowrap opacity-0 group-hover:opacity-0 transition-opacity">
+                  {Object.keys(groupedPhotos)[selectedDateIndex] || 'Today'}
+                </div>
               </div>
-
-              {/* Slider Track */}
-              <div className="flex-1 flex flex-col items-center justify-between h-full relative">
-                {/* Interactive vertical slider */}
-                <input
-                  type="range"
-                  min="0"
-                  max={Math.max(0, Object.keys(groupedPhotos).length - 1)}
-                  value={selectedDateIndex}
-                  onChange={(e) => {
-                    const index = parseInt(e.target.value);
-                    setSelectedDateIndex(index);
-                    
-                    // Scroll to selected date
-                    const dateKeys = Object.keys(groupedPhotos);
-                    if (dateKeys[index]) {
-                      const element = dateRefs.current.get(dateKeys[index]);
-                      element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                  }}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  style={{ writingMode: 'bt-lr' }}
-                  aria-label="Timeline slider"
-                />
-
-                {/* Slider indicator dot */}
-                <div 
-                  className="absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full pointer-events-none transition-all duration-150 z-20"
-                  style={{
-                    top: `${(selectedDateIndex / (Object.keys(groupedPhotos).length - 1 || 1)) * 100}%`,
-                    boxShadow: '0 0 10px rgba(14, 165, 233, 0.8), 0 0 20px rgba(168, 85, 247, 0.4)',
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                />
-
-                {/* Slider indicator line */}
-                <div 
-                  className="absolute left-1/2 -translate-x-1/2 w-6 h-0.5 bg-blue-500 pointer-events-none transition-all duration-150 z-20"
-                  style={{
-                    top: `${(selectedDateIndex / (Object.keys(groupedPhotos).length - 1 || 1)) * 100}%`,
-                    boxShadow: '0 0 8px rgba(14, 165, 233, 0.6)',
-                  }}
-                />
-              </div>
-
-              {/* Static Year Label at Top */}
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 text-xs font-semibold text-immich-primary pointer-events-none">
-                2025
-              </div>
-
-              {/* Current Date Display at Bottom - visible on hover */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-immich-bg dark:bg-immich-dark-gray rounded-lg border border-immich-primary/30 text-xs font-semibold text-immich-primary whitespace-nowrap opacity-0 group-hover:opacity-0 transition-opacity">
-                {Object.keys(groupedPhotos)[selectedDateIndex] || 'Today'}
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -542,4 +548,62 @@ export default function Photos() {
       />
     </Layout>
   );
+
+  // Mobile-optimized grid layout
+  function renderPhotoGridMobile(photos: Photo[]) {
+    return (
+      <div className="grid grid-cols-3 gap-0.5">
+        {photos.map((photo) => (
+          <div
+            key={photo.id}
+            className="relative group cursor-pointer overflow-hidden rounded-sm aspect-[4/5]"
+            onClick={(e) => handlePhotoClick(photo.id, e)}
+          >
+            <img
+              src={photo.src}
+              alt={photo.alt}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = `https://via.placeholder.com/300x375?text=Photo+${photo.id}`;
+              }}
+            />
+            
+            {/* Selection overlay */}
+            <div className={`absolute inset-0 transition-all duration-200 ${
+              selectedPhotos.includes(photo.id)
+                ? 'bg-immich-primary/30 ring-2 ring-immich-primary ring-inset'
+                : 'bg-black/0 group-hover:bg-black/20'
+            }`} />
+            
+            {/* Selection checkbox */}
+            <div 
+              className={`absolute top-1 left-1 w-5 h-5 rounded-full border-2 transition-all duration-200 flex items-center justify-center z-10 ${
+                selectedPhotos.includes(photo.id)
+                  ? 'bg-immich-primary border-immich-primary'
+                  : 'border-white/70 opacity-0 group-hover:opacity-100'
+              }`}
+              onClick={(e) => toggleSelect(photo.id, e)}
+              role="checkbox"
+              aria-checked={selectedPhotos.includes(photo.id)}
+              tabIndex={0}
+              onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleSelect(photo.id, e as unknown as React.MouseEvent);
+                }
+              }}
+            >
+              {selectedPhotos.includes(photo.id) && (
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 }

@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useRef } from 'react';
-import { Image, FolderOpen, Sun, Moon, LogOut, Upload } from 'lucide-react';
+import { Image, FolderOpen, Sun, Moon, LogOut, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 import { usePhotos } from '@/hooks/usePhotos';
@@ -14,7 +14,12 @@ interface UserData {
   files: { used: number; total: number };
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
@@ -91,53 +96,84 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 h-screen bg-sidebar flex flex-col border-r border-sidebar-border" role="complementary" aria-label="Main navigation">
-      {/* Selected Page Header */}
-      <div className="p-4 border-b border-sidebar-border">
-        {(() => {
-          const currentPage = navItems.find(item => location.pathname === item.path);
-          if (currentPage) {
-            const Icon = currentPage.icon;
-            
-            // Color mapping for different pages
-            const colorMap: Record<string, { bg: string; text: string }> = {
-              '/photos': { bg: 'bg-blue-500', text: 'text-white' },
-              '/albums': { bg: 'bg-purple-500', text: 'text-white' },
-            };
-            
-            const colors = colorMap[currentPage.path] || { bg: 'bg-immich-primary', text: 'text-white' };
-            
-            return (
-              <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 ${colors.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                  <Icon className={`w-6 h-6 ${colors.text}`} aria-hidden="true" />
-                </div>
-                <h1 className="text-xl font-semibold text-sidebar-foreground">{currentPage.label}</h1>
-              </div>
-            );
-          }
-        })()}
-        
-        {/* Upload Button */}
+    <aside className={`h-screen bg-sidebar flex flex-col border-r border-sidebar-border transition-all duration-300 ${isOpen ? 'w-64' : 'w-20'}`} role="complementary" aria-label="Main navigation">
+      {/* Header Section - Page Info with Collapse Button */}
+      {isOpen && (
+        <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
+          <div>
+            {(() => {
+              const currentPage = navItems.find(item => location.pathname === item.path);
+              if (currentPage) {
+                const Icon = currentPage.icon;
+                
+                const colorMap: Record<string, { bg: string; text: string }> = {
+                  '/photos': { bg: 'bg-blue-500', text: 'text-white' },
+                  '/albums': { bg: 'bg-purple-500', text: 'text-white' },
+                };
+                
+                const colors = colorMap[currentPage.path] || { bg: 'bg-immich-primary', text: 'text-white' };
+                
+                return (
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 ${colors.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      <Icon className={`w-6 h-6 ${colors.text}`} aria-hidden="true" />
+                    </div>
+                    <h1 className="text-xl font-semibold text-sidebar-foreground">{currentPage.label}</h1>
+                  </div>
+                );
+              }
+            })()}
+          </div>
+          
+          {/* Collapse Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className="text-immich-fg dark:text-immich-dark-fg hover:bg-immich-primary/20 border border-immich-primary/40"
+            aria-label="Collapse sidebar"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
+
+      {/* Collapsed Header with Expand Button */}
+      {!isOpen && (
+        <div className="p-2 flex items-center justify-center border-b border-sidebar-border" style={{ padding: '0.72rem' }}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className="text-immich-fg dark:text-immich-dark-fg hover:bg-immich-primary/20 border border-immich-primary/40"
+            aria-label="Expand sidebar"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
+
+      {/* Top Section - Upload Button */}
+      <div className={`${isOpen ? 'p-4' : 'p-2 mt-2'} transition-all duration-300`}>
         <Button 
           variant="default" 
           size="default" 
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+          className={`bg-blue-500 hover:bg-blue-600 text-white transition-all duration-300 flex items-center justify-center rounded-lg ${isOpen ? 'w-full gap-2' : 'w-full h-10'}`}
           onClick={handleUploadClick}
           aria-label="Upload photos"
+          title={!isOpen ? 'Upload' : undefined}
         >
-          <Upload className="w-4 h-4 mr-2" />
-          Upload
+          <Upload className="w-5 h-5 flex-shrink-0" />
+          {isOpen && <span>Upload</span>}
         </Button>
       </div>
 
-      {/* Navigation */}
-      <nav className="p-4 space-y-2" role="navigation" aria-label="Primary navigation">
+      {/* Navigation Section */}
+      <nav className={`transition-all duration-300 ${isOpen ? 'p-4 space-y-2' : 'px-2 space-y-1'}`} role="navigation" aria-label="Primary navigation">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
           
-          // Color mapping for different pages
           const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
             '/photos': { bg: 'bg-blue-500', text: 'text-white', icon: 'text-white' },
             '/albums': { bg: 'bg-purple-500', text: 'text-white', icon: 'text-white' },
@@ -149,16 +185,17 @@ export function Sidebar() {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`nav-button flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all ${
+              className={`nav-button flex items-center justify-center rounded-lg transition-all ${isOpen ? 'gap-3 w-full px-3 py-2' : 'w-full h-10'} ${
                 isActive 
                   ? `${colors.bg} ${colors.text}` 
                   : 'nav-button-inactive'
               }`}
               aria-current={isActive ? 'page' : undefined}
               aria-label={`Navigate to ${item.label}`}
+              title={!isOpen ? item.label : undefined}
             >
-              <Icon className={`w-5 h-5 ${isActive ? colors.icon : ''}`} aria-hidden="true" />
-              {item.label}
+              <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? colors.icon : ''}`} aria-hidden="true" />
+              {isOpen && <span>{item.label}</span>}
             </button>
           );
         })}
@@ -167,104 +204,107 @@ export function Sidebar() {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* User Section */}
-      <div className="p-4 border-t border-sidebar-border">
-        {/* Avatar & Info */}
-        <div className="flex items-center gap-3 mb-4">
-          <div 
-            className={`w-12 h-12 rounded-full ${getAvatarColor(user.name)} flex items-center justify-center text-white font-semibold text-lg`}
-            role="img"
-            aria-label={`Avatar for ${user.name || 'User'}`}
-          >
-            {user.name?.charAt(0)?.toUpperCase() || 'U'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sidebar-foreground truncate" aria-label="User name">
-              {user.name || 'User'}
-            </p>
-            <p className="text-sm text-muted-foreground truncate" aria-label="User phone number">
-              {user.phone || '+1234567890'}
-            </p>
-          </div>
-        </div>
-
-        {/* Plan */}
-        <p className="text-primary font-medium mb-3" aria-label="Current plan">{user.plan || 'Free Plan'}</p>
-
-        {/* Storage Stats */}
-        <div className="space-y-2 mb-4" role="region" aria-label="Storage information">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Disk Space:</span>
-            <span className="text-foreground" aria-live="polite">
-              {user.diskSpace?.used?.toFixed(1) || 0} MiB / {((user.diskSpace?.total || 10240) / 1024).toFixed(0)} GiB
-            </span>
-          </div>
-          <div 
-            className="storage-bar"
-            role="progressbar"
-            aria-valuenow={Math.min(diskPercentage, 100)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Disk space usage"
-          >
+      {/* User Info Section - Only visible when expanded */}
+      {isOpen && (
+        <div className="p-4 border-t border-sidebar-border space-y-4">
+          {/* Avatar & Info */}
+          <div className="flex items-center gap-3">
             <div 
-              className="storage-fill bg-gradient-to-r from-green-500 to-green-400"
-              style={{ width: `${Math.min(diskPercentage, 100)}%` }}
-            />
+              className={`rounded-full ${getAvatarColor(user.name)} flex items-center justify-center text-white font-semibold text-lg flex-shrink-0 w-12 h-12`}
+              role="img"
+              aria-label={`Avatar for ${user.name || 'User'}`}
+            >
+              {user.name?.charAt(0)?.toUpperCase() || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sidebar-foreground truncate" aria-label="User name">
+                {user.name || 'User'}
+              </p>
+              <p className="text-sm text-muted-foreground truncate" aria-label="User phone number">
+                {user.phone || '+1234567890'}
+              </p>
+            </div>
           </div>
-          
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Files:</span>
-            <span className="text-foreground" aria-live="polite">
-              {user.files?.used || 0} / {user.files?.total || 100}
-            </span>
-          </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handleFileChange}
-            aria-label="Upload photos"
-          />
-         
-          
-          <Button 
-            variant="secondary" 
-            size="default" 
-            className="w-full"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          >
-            {theme === 'dark' ? (
-              <>
-                <Sun className="w-4 h-4 mr-2" aria-hidden="true" />
-                Light Mode
-              </>
-            ) : (
-              <>
-                <Moon className="w-4 h-4 mr-2" aria-hidden="true" />
-                Dark Mode
-              </>
-            )}
-          </Button>
-          
-          <Button 
-            variant="danger" 
-            size="default" 
-            className="w-full"
-            onClick={handleSignOut}
-            aria-label="Sign out of your account"
-          >
-            <LogOut className="w-4 h-4 mr-2" aria-hidden="true" />
-            Sign Out
-          </Button>
+          {/* Plan */}
+          <p className="text-primary font-medium" aria-label="Current plan">{user.plan || 'Free Plan'}</p>
+
+          {/* Storage Stats */}
+          <div className="space-y-2" role="region" aria-label="Storage information">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Disk Space:</span>
+              <span className="text-foreground" aria-live="polite">
+                {user.diskSpace?.used?.toFixed(1) || 0} MiB / {((user.diskSpace?.total || 10240) / 1024).toFixed(0)} GiB
+              </span>
+            </div>
+            <div 
+              className="storage-bar"
+              role="progressbar"
+              aria-valuenow={Math.min(diskPercentage, 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Disk space usage"
+            >
+              <div 
+                className="storage-fill bg-gradient-to-r from-green-500 to-green-400"
+                style={{ width: `${Math.min(diskPercentage, 100)}%` }}
+              />
+            </div>
+            
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Files:</span>
+              <span className="text-foreground" aria-live="polite">
+                {user.files?.used || 0} / {user.files?.total || 100}
+              </span>
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* Bottom Action Buttons */}
+      <div className={`transition-all duration-300 ${isOpen ? 'p-4 border-t border-sidebar-border space-y-2' : 'p-2 space-y-1'}`}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+          aria-label="Upload photos"
+        />
+        
+        <Button 
+          variant="secondary" 
+          size="default" 
+          className={`transition-all flex items-center justify-center rounded-lg ${isOpen ? 'w-full gap-2' : 'w-full h-10'}`}
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          title={!isOpen ? `${theme === 'dark' ? 'Light' : 'Dark'} Mode` : undefined}
+        >
+          {theme === 'dark' ? (
+            <>
+              <Sun className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+              {isOpen && <span>Light Mode</span>}
+            </>
+          ) : (
+            <>
+              <Moon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+              {isOpen && <span>Dark Mode</span>}
+            </>
+          )}
+        </Button>
+        
+        <Button 
+          variant="danger" 
+          size="default" 
+          className={`transition-all flex items-center justify-center rounded-lg ${isOpen ? 'w-full gap-2' : 'w-full h-10'}`}
+          onClick={handleSignOut}
+          aria-label="Sign out of your account"
+          title={!isOpen ? 'Sign Out' : undefined}
+        >
+          <LogOut className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+          {isOpen && <span>Sign Out</span>}
+        </Button>
       </div>
     </aside>
   );
