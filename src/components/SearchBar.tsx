@@ -51,7 +51,7 @@ export function SearchBar() {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4">
+    <div className="w-full max-w-4xl mx-auto pl-1 px-4">
       <div className="relative">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground pointer-events-none" />
         <Input

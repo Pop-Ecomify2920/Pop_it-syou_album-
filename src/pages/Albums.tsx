@@ -190,7 +190,7 @@ export default function Albums() {
       <div className="space-y-6 bg-immich-bg dark:bg-immich-dark-bg">
         {/* Page Header with Color State */}
         <div className="p-6 border-b border-border">
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <FolderOpen className="w-7 h-7 text-white" />
             </div>
@@ -198,15 +198,15 @@ export default function Albums() {
           </div>
 
           {/* Header Controls */}
-          <div className="flex items-center gap-3 flex-wrap">
+          {/* <div className="flex items-center gap-3 flex-wrap"> */}
             {/* Create Button - First Priority */}
-            <Button style={{ display: 'flex', alignItems: 'center'}} variant="default" size="sm" onClick={() => setCreateDialogOpen(true)}>
+            {/* <Button style={{ display: 'flex', alignItems: 'center'}} variant="default" size="sm" onClick={() => setCreateDialogOpen(true)}>
               <Plus className="w-4 h-4 mr-1" />
               <p style={{lineHeight : "normal"}}>Create album</p>
-            </Button>
+            </Button> */}
 
             {/* Tabs - Mobile */}
-            <div className="flex items-center gap-1 bg-secondary rounded-lg p-1 md:hidden">
+            {/* <div className="flex items-center gap-1 bg-secondary rounded-lg p-1 md:hidden">
               {tabs.map((tab) => (
                 <button 
                   key={tab.id}
@@ -224,7 +224,7 @@ export default function Albums() {
                   {tab.label}
                 </button>
               ))}
-            </div>
+            </div> */}
 
             {/* Search */}
             {/* <div className="relative">
@@ -262,7 +262,7 @@ export default function Albums() {
                 <SelectItem value="owner">By owner</SelectItem>
               </SelectContent>
             </Select> */}
-          </div>
+          {/* </div> */}
         </div>
 
         {/* Tabs - Desktop */}
@@ -346,7 +346,7 @@ export default function Albums() {
                   {groupBy !== 'none' && (
                     <button
                       onClick={() => year && toggleYear(year)}
-                      className="flex items-center gap-2 text-lg font-semibold text-immich-fg dark:text-immich-dark-fg hover:text-immich-primary transition-colors"
+                      className="flex items-center pl-1 gap-2 text-lg font-semibold text-immich-fg dark:text-immich-dark-fg hover:text-immich-primary transition-colors"
                       aria-expanded={isExpanded}
                     >
                       {isYearGroup && (
@@ -366,6 +366,31 @@ export default function Albums() {
                   {/* Albums Grid */}
                   {isExpanded && (
                     <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-0.5">
+                      {/* Create Album Card - Always First */}
+                      <div
+                        className="group bg-immich-card dark:bg-immich-dark-gray border border-border overflow-hidden hover:border-immich-primary/50 hover:shadow-lg transition-all duration-200 cursor-pointer"
+                        onClick={() => setCreateDialogOpen(true)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setCreateDialogOpen(true);
+                          }
+                        }}
+                        aria-label="Create new album"
+                      >
+                        <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-immich-primary/20 to-immich-primary/5 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-immich-primary/30 rounded-full flex items-center justify-center mx-auto mb-2">
+                              <Plus className="w-6 h-6 text-immich-primary" />
+                            </div>
+                            <p className="text-sm font-medium text-immich-fg dark:text-immich-dark-fg">Create Album</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Album Cards */}
                       {groupAlbums.map((album) => (
                         <div
                           key={album.id}
