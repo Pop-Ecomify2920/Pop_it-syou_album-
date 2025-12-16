@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { PhotoViewer } from '@/components/PhotoViewer';
 import { Button } from '@/components/ui/button';
-import { Upload, Sparkles, X as CloseIcon, Trash2 } from 'lucide-react';
+import { Upload, Sparkles, X as CloseIcon, Trash2, Loader2 } from 'lucide-react';
 import { usePhotos, Photo as PhotoType } from '@/hooks/usePhotos';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -34,11 +34,6 @@ const unsplashImageIds = [
   '1441974231531-c6227db76b6e', // Trees
   '1519681393784-d120267933ba', // Peak
   '1501594907352-04cda38ebc29', // Sand
-  // '1519904981062-0a3b74f88edf', // Waves
-  // '1506905925346-21bda4d32df4', // Scenery
-  // '1469474968028-56623f02e42e', // Landscape
-  // '1447752875215-b2761acb3c5d', // Path
-  // '1433086966358-54859d0ed716', // Stream
 ];
 
 // Mock photo data - with better descriptive names for search testing
@@ -112,7 +107,19 @@ interface Photo {
 export default function Photos() {
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') || '';
-  const { uploadedPhotos, uploadMultiplePhotos, deletePhoto } = usePhotos();
+  const { 
+    uploadedPhotos, 
+    uploadMultiplePhotos, 
+    deletePhoto,
+    isInitialized,
+    totalCount,
+    isLoading,
+    hasMore,
+    loadMore,
+    setObserverTarget,
+    error,
+    hardReset
+  } = usePhotos();
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -125,19 +132,18 @@ export default function Photos() {
   const dateRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
   // Combine uploaded photos with mock photos
-  // Uploaded photos go to "Today" group, mock photos keep their dates
   const allPhotos = useMemo(() => {
     const uploaded = uploadedPhotos.map(photo => ({
       ...photo,
-      date: 'Today', // Always put uploaded photos in Today
+      date: 'Today',
     }));
     
-    // Combine: uploaded photos first (in Today), then mock photos
     return [...uploaded, ...mockPhotos];
-  }, [uploadedPhotos, refreshKey]);
+  }, [uploadedPhotos]);
 
   // Filter photos by search query
   const filteredPhotos = useMemo(() => {
@@ -212,16 +218,15 @@ export default function Photos() {
         ? prev.filter(p => p !== id)
         : [...prev, id]
     );
-    setLastSelectedIndex(allPhotos.findIndex(p => p.id === id));
+    setLastSelectedIndex(uploadedPhotos.findIndex(p => p.id === id));
   };
 
   const handlePhotoClick = (photoId: number, e: React.MouseEvent) => {
     if (e.shiftKey && lastSelectedIndex !== null) {
-      // Shift+click: select range
-      const currentIndex = allPhotos.findIndex(p => p.id === photoId);
+      const currentIndex = uploadedPhotos.findIndex(p => p.id === photoId);
       const start = Math.min(currentIndex, lastSelectedIndex);
       const end = Math.max(currentIndex, lastSelectedIndex);
-      const rangeIds = allPhotos.slice(start, end + 1).map(p => p.id);
+      const rangeIds = uploadedPhotos.slice(start, end + 1).map(p => p.id);
       setSelectedPhotos(prev => {
         const newSelection = new Set(prev);
         rangeIds.forEach(id => newSelection.add(id));
@@ -229,13 +234,12 @@ export default function Photos() {
       });
       setLastSelectedIndex(currentIndex);
     } else {
-      // Regular click: open viewer
       openViewer(photoId);
     }
   };
 
   const openViewer = (photoId: number) => {
-    const index = allPhotos.findIndex(p => p.id === photoId);
+    const index = uploadedPhotos.findIndex(p => p.id === photoId);
     if (index !== -1) {
       setCurrentPhotoIndex(index);
       setViewerOpen(true);
@@ -275,7 +279,6 @@ export default function Photos() {
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
                 onError={(e) => {
-                  // Fallback to a placeholder if image fails to load
                   const target = e.target as HTMLImageElement;
                   target.src = `https://via.placeholder.com/${photo.width || 400}x${photo.height || 300}?text=Photo+${photo.id}`;
                 }}
@@ -353,7 +356,7 @@ export default function Photos() {
     );
   };
 
-  const hasPhotos = allPhotos.length > 0;
+  const hasPhotos = uploadedPhotos.length > 0;
 
   return (
     <Layout>
@@ -381,32 +384,18 @@ export default function Photos() {
 
         {/* Memory Lane Widget */}
         {showMemoryLane && filteredPhotos.length > 0 && (
-          // <div className="mb-6 pr-4 pl-4 pb-1 pt-1 bg-immich-card dark:bg-immich-dark-gray rounded-xl border border-border">
-          //   <div className="flex items-center justify-between">
-          //     <div className="flex items-center gap-3">
-          //       <div className="p-2 bg-immich-primary/10 rounded-lg">
-          //         <Sparkles className="w-5 h-5 text-immich-primary" />
-          //       </div>
-          //       <div>
-          //         <h3 className="font-semibold text-immich-fg dark:text-immich-dark-fg">Memory Lane</h3>
-          //         <p className="text-sm text-muted-foreground">Photos from this day in previous years</p>
-          //       </div>
-          //     </div>
-          //     <Button
-          //       variant="ghost"
-          //       size="sm"
-          //       onClick={() => setShowMemoryLane(false)}
-          //       aria-label="Hide Memory Lane"
-          //     >
-          //       Hide
-          //     </Button>
-          //   </div>
-          // </div>
           <div></div>
         )}
 
         {/* Main Content */}
-        {filteredPhotos.length === 0 ? (
+        {!isInitialized ? (
+          <div className="flex-1 flex items-center justify-center py-20">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-immich-primary" />
+              <p className="text-immich-fg dark:text-immich-dark-fg">Loading your photos...</p>
+            </div>
+          </div>
+        ) : filteredPhotos.length === 0 ? (
           /* Empty State */
           <div className="flex-1 flex items-center justify-center py-20">
             <div className="bg-immich-card dark:bg-immich-dark-gray rounded-3xl p-12 text-center max-w-lg border border-border">
@@ -427,44 +416,44 @@ export default function Photos() {
                 }
               </p>
               {!searchQuery && (
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={async (e) => {
-                    const files = e.target.files;
-                    if (!files || files.length === 0) return;
-                    
-                    const imageFiles = Array.from(files).filter(file => 
-                      file.type.startsWith('image/')
-                    );
-                    
-                    if (imageFiles.length > 0) {
-                      try {
-                        toast.loading(`Uploading ${imageFiles.length} photo(s)...`);
-                        await uploadMultiplePhotos(imageFiles);
-                        toast.success(`Successfully uploaded ${imageFiles.length} photo(s)!`);
-                      } catch (error) {
-                        toast.error('Failed to upload photos: ' + (error instanceof Error ? error.message : 'Unknown error'));
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={async (e) => {
+                      const files = e.target.files;
+                      if (!files || files.length === 0) return;
+                      
+                      const imageFiles = Array.from(files).filter(file => 
+                        file.type.startsWith('image/')
+                      );
+                      
+                      if (imageFiles.length > 0) {
+                        try {
+                          toast.loading(`Uploading ${imageFiles.length} photo(s)...`);
+                          await uploadMultiplePhotos(imageFiles);
+                          toast.success(`Successfully uploaded ${imageFiles.length} photo(s)!`);
+                        } catch (error) {
+                          toast.error('Failed to upload photos: ' + (error instanceof Error ? error.message : 'Unknown error'));
+                        }
+                      } else {
+                        toast.error('Please select image files only');
                       }
-                    } else {
-                      toast.error('Please select image files only');
-                    }
-                    
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = '';
-                    }
-                  }}
-                  aria-label="Upload photos"
-                />
-              )}
-              {!searchQuery && (
-                <Button onClick={() => fileInputRef.current?.click()} variant="upload" style={{ backgroundColor: '#3eb3da' }}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload photos
-                </Button>
+                      
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}
+                    aria-label="Upload photos"
+                  />
+                  <Button onClick={() => fileInputRef.current?.click()} variant="upload" style={{ backgroundColor: '#3eb3da' }}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload photos
+                  </Button>
+                </>
               )}
               {searchQuery && (
                 <a
@@ -508,6 +497,27 @@ export default function Photos() {
                     {isMobile ? renderPhotoGridMobile(photos) : renderPhotoGrid(photos)}
                   </div>
                 ))}
+
+                {/* Infinite Scroll Sentinel - Triggers loading of next page */}
+                <div
+                  ref={(el) => {
+                    sentinelRef.current = el || undefined;
+                    setObserverTarget(el);
+                  }}
+                  className="h-20 flex items-center justify-center"
+                >
+                  {isLoading && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Loading more photos...</span>
+                    </div>
+                  )}
+                  {!hasMore && filteredPhotos.length > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      End of gallery · {uploadedPhotos.length + mockPhotos.length} total photos
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -634,7 +644,7 @@ export default function Photos() {
 
       {/* Photo Viewer Modal */}
       <PhotoViewer
-        photos={allPhotos}
+        photos={uploadedPhotos}
         currentIndex={currentPhotoIndex}
         isOpen={viewerOpen}
         onClose={() => setViewerOpen(false)}
