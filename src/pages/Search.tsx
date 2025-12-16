@@ -85,7 +85,7 @@ export default function Search() {
     setActiveFilters(active);
   }, [filters]);
 
-  const handleFilterChange = (key: keyof SearchFilter, value: any) => {
+  const handleFilterChange = (key: keyof SearchFilter, value: SearchFilter[keyof SearchFilter]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 

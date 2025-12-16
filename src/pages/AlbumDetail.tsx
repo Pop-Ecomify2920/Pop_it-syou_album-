@@ -2,11 +2,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useCallback, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Image as ImageIcon } from 'lucide-react';
+import { ChevronLeft, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { useAlbumsLocal } from '@/hooks/useAlbumsLocal';
 import { useAlbumPhotos } from '@/hooks/useAlbumPhotos';
 import { usePhotos } from '@/hooks/usePhotos';
 import { PhotoViewer } from '@/components/PhotoViewer';
+import { toast } from 'sonner';
 
 interface Photo {
   id: number;
@@ -21,18 +22,19 @@ export default function AlbumDetail() {
   const { albumId } = useParams<{ albumId: string }>();
   const navigate = useNavigate();
   const { albums } = useAlbumsLocal();
-  const { getAlbumPhotos, getPhotoCount } = useAlbumPhotos();
-  const { getAllPhotos } = usePhotos();
+  const { getAlbumPhotos, getPhotoCount, removePhotoFromAlbum } = useAlbumPhotos();
+  const { getAllPhotos, deletePhoto } = usePhotos();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Find the album
   const album = useMemo(() => {
     return albums.find(a => a.id === albumId);
   }, [albums, albumId]);
 
-  // Get all photos and filter by album
+  // Get all photos and filter by album - now includes refreshKey to force updates
   const allPhotos = useMemo(() => {
     if (!album) return [];
     
@@ -42,7 +44,7 @@ export default function AlbumDetail() {
     return allAvailablePhotos.filter(photo => 
       albumPhotoIds.includes(photo.id)
     );
-  }, [album, getAllPhotos, getAlbumPhotos]);
+  }, [album, getAllPhotos, getAlbumPhotos, refreshKey]);
 
   const handlePhotoClick = (photoId: number) => {
     const index = allPhotos.findIndex(p => p.id === photoId);
@@ -52,6 +54,43 @@ export default function AlbumDetail() {
     }
   };
 
+  const handlePhotoDelete = useCallback(async (photoId: number) => {
+    if (!album) return;
+
+    try {
+      // Delete the photo first
+      await deletePhoto(photoId);
+      
+      // Then remove from album
+      removePhotoFromAlbum(album.id, photoId);
+      
+      // Force component to re-render with new data
+      setRefreshKey(prev => prev + 1);
+      
+      // Close viewer if it was the only photo
+      const photosAfterDelete = allPhotos.filter(p => p.id !== photoId);
+      
+      if (photosAfterDelete.length <= 1) {
+        setViewerOpen(false);
+      } else {
+        // Navigate to next photo or previous if it was the last one
+        const currentIndex = allPhotos.findIndex(p => p.id === photoId);
+        if (currentIndex < allPhotos.length - 1) {
+          setCurrentPhotoIndex(currentIndex);
+        } else if (currentIndex > 0) {
+          setCurrentPhotoIndex(currentIndex - 1);
+        } else {
+          setCurrentPhotoIndex(0);
+        }
+      }
+      
+      toast.success('Photo deleted successfully');
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      toast.error('Failed to delete photo');
+    }
+  }, [album, removePhotoFromAlbum, deletePhoto, allPhotos]);
+
   const toggleSelect = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedPhotos(prev => 
@@ -59,6 +98,32 @@ export default function AlbumDetail() {
         ? prev.filter(p => p !== id)
         : [...prev, id]
     );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedPhotos.length === 0 || !album) return;
+
+    try {
+      const photoCount = selectedPhotos.length;
+      
+      // Delete all photos sequentially
+      for (const photoId of selectedPhotos) {
+        try {
+          await deletePhoto(photoId);
+          removePhotoFromAlbum(album.id, photoId);
+        } catch (error) {
+          console.error(`Failed to delete photo ${photoId}:`, error);
+        }
+      }
+      
+      // Force component to re-render with new data
+      setRefreshKey(prev => prev + 1);
+      setSelectedPhotos([]);
+      toast.success(`${photoCount} photo(s) deleted successfully`);
+    } catch (error) {
+      console.error('Error deleting photos:', error);
+      toast.error('Failed to delete photos');
+    }
   };
 
   if (!album) {
@@ -190,6 +255,31 @@ export default function AlbumDetail() {
             </div>
           </div>
         )}
+
+        {/* Delete Selected Bar */}
+        {selectedPhotos.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-immich-card dark:bg-immich-dark-gray rounded-full px-6 py-3 shadow-lg border border-border flex items-center gap-4">
+            <span className="text-sm font-medium text-immich-fg dark:text-immich-dark-fg">
+              {selectedPhotos.length} selected
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedPhotos([])}
+            >
+              Clear
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={handleDeleteSelected}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Photo Viewer Modal */}
@@ -199,6 +289,7 @@ export default function AlbumDetail() {
         isOpen={viewerOpen}
         onClose={() => setViewerOpen(false)}
         onNavigate={setCurrentPhotoIndex}
+        onDelete={handlePhotoDelete}
       />
     </Layout>
   );

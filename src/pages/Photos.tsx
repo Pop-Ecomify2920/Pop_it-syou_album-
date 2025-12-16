@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { PhotoViewer } from '@/components/PhotoViewer';
 import { Button } from '@/components/ui/button';
-import { Upload, Sparkles, X as CloseIcon } from 'lucide-react';
+import { Upload, Sparkles, X as CloseIcon, Trash2 } from 'lucide-react';
 import { usePhotos, Photo as PhotoType } from '@/hooks/usePhotos';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -112,7 +112,7 @@ interface Photo {
 export default function Photos() {
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') || '';
-  const { uploadedPhotos, uploadMultiplePhotos } = usePhotos();
+  const { uploadedPhotos, uploadMultiplePhotos, deletePhoto } = usePhotos();
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -120,6 +120,7 @@ export default function Photos() {
   const [showMemoryLane, setShowMemoryLane] = useState(true);
   const [visibleDates, setVisibleDates] = useState<Set<string>>(new Set());
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const dateRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -136,7 +137,7 @@ export default function Photos() {
     
     // Combine: uploaded photos first (in Today), then mock photos
     return [...uploaded, ...mockPhotos];
-  }, [uploadedPhotos]);
+  }, [uploadedPhotos, refreshKey]);
 
   // Filter photos by search query
   const filteredPhotos = useMemo(() => {
@@ -238,6 +239,19 @@ export default function Photos() {
     if (index !== -1) {
       setCurrentPhotoIndex(index);
       setViewerOpen(true);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    try {
+      for (const photoId of selectedPhotos) {
+        await deletePhoto(photoId);
+      }
+      setSelectedPhotos([]);
+      setRefreshKey((prev) => prev + 1);
+      toast.success('Selected photos deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete selected photos');
     }
   };
 
@@ -600,7 +614,8 @@ export default function Photos() {
                 <Button variant="ghost" size="sm">
                   Share
                 </Button>
-                <Button variant="ghost" size="sm" className="text-destructive">
+                <Button variant="ghost" size="sm" className="text-destructive" onClick={handleDeleteSelected}>
+                  <Trash2 className="w-4 h-4 mr-1" />
                   Delete
                 </Button>
                 <Button
@@ -624,6 +639,15 @@ export default function Photos() {
         isOpen={viewerOpen}
         onClose={() => setViewerOpen(false)}
         onNavigate={setCurrentPhotoIndex}
+        onDelete={async (photoId) => {
+          try {
+            await deletePhoto(photoId);
+            setRefreshKey((prev) => prev + 1);
+            toast.success('Photo deleted successfully');
+          } catch (error) {
+            toast.error('Failed to delete photo');
+          }
+        }}
       />
     </Layout>
   );

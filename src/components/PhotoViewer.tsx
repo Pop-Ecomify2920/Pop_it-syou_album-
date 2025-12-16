@@ -13,7 +13,8 @@ import {
   Heart,
   Share2,
   Play,
-  Pause
+  Pause,
+  Trash2
 } from 'lucide-react';
 
 interface Photo {
@@ -29,6 +30,7 @@ interface PhotoViewerProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigate: (index: number) => void;
+  onDelete?: (photoId: number) => void;
 }
 
 // Optimize image URL - use smaller size for faster loading
@@ -80,12 +82,12 @@ const useImagePreloader = (photos: Photo[], currentIndex: number) => {
   }, [currentIndex, photos]);
 };
 
-export function PhotoViewer({ photos, currentIndex, isOpen, onClose, onNavigate }: PhotoViewerProps) {
+export function PhotoViewer({ photos, currentIndex, isOpen, onClose, onNavigate, onDelete }: PhotoViewerProps) {
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const [imageQuality, setImageQuality] = useState<'thumb' | 'display'>('display');
+  const [imageQuality, setImageQuality] = useState<'thumb' | 'display' | 'full'>('display');
   const [isPlaying, setIsPlaying] = useState(false);
   const slideshowInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -264,6 +266,16 @@ export function PhotoViewer({ photos, currentIndex, isOpen, onClose, onNavigate 
             >
               <X className="h-5 w-5" />
             </Button>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white/70 hover:text-white hover:bg-white/10"
+                onClick={() => onDelete(currentPhoto.id)}
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            )}
           </div>
         </div>
 
